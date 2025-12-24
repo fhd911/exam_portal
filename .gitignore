@@ -1,29 +1,18 @@
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.log
-
-# Virtualenv
+@"
+# Python / venv
 .venv/
 venv/
-env/
+__pycache__/
+*.pyc
 
 # Django
 db.sqlite3
+*.log
 media/
 staticfiles/
-*.sqlite3
 
-# IDE
+# OS/IDE
 .vscode/
 .idea/
-
-# OS
 .DS_Store
-Thumbs.db
-
-# Secrets
-.env
-.env.*
+"@ | Out-File -Encoding utf8 .gitignore
