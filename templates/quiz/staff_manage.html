@@ -1,0 +1,348 @@
+{% extends "quiz/base.html" %}
+{% block title %}لوحة الإدارة{% endblock %}
+
+{% block extra_head %}
+<style>
+  .admin-head{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+  .admin-title h2{ margin:0; }
+  .admin-title .sub{ margin-top:6px; }
+
+  .tabs{
+    display:flex; gap:8px; flex-wrap:wrap;
+  }
+  .tab{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:9px 12px;
+    border-radius:999px;
+    border:1px solid rgba(231,238,246,.95);
+    background:rgba(255,255,255,.92);
+    color:var(--ink);
+    text-decoration:none;
+    font-weight:900;
+    font-size:12px;
+    box-shadow: 0 8px 18px rgba(2,44,34,.06);
+  }
+  .tab.primary{
+    background: linear-gradient(135deg, rgba(14,165,164,.95), rgba(16,185,129,.95));
+    color:#fff;
+    border-color: rgba(14,165,164,.25);
+  }
+
+  .toolbar{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-end;
+  }
+
+  .glass{
+    background:rgba(255,255,255,.78);
+    border:1px solid rgba(231,238,246,.95);
+    border-radius:22px;
+    box-shadow: var(--shadow2);
+  }
+
+  .filters{
+    padding:12px;
+  }
+  .filters-grid{
+    display:grid;
+    grid-template-columns: 1.6fr .8fr .9fr .9fr auto auto;
+    gap:10px;
+    align-items:end;
+  }
+  @media (max-width: 980px){
+    .filters-grid{ grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 520px){
+    .filters-grid{ grid-template-columns: 1fr; }
+  }
+
+  .lbl{
+    display:block;
+    margin-bottom:6px;
+    font-weight:900;
+    color:var(--mut);
+    font-size:12.2px;
+  }
+
+  .export-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    margin: 10px 0 0;
+  }
+  .export-hint{
+    color:var(--mut);
+    font-size:12.2px;
+    line-height:1.8;
+  }
+
+  .table-wrap{
+    padding:0;
+    overflow:hidden;
+  }
+  .table-scroll{
+    overflow:auto;
+  }
+
+  .meta-chip{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:11.3px;
+    font-weight:900;
+    border:1px solid rgba(231,238,246,.95);
+    background:#fff;
+    color:var(--mut);
+    white-space:nowrap;
+  }
+
+  .actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  .pagination{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px 14px;
+    border-top:1px solid rgba(231,238,246,.95);
+    background: rgba(255,255,255,.92);
+  }
+
+  /* تحسين بسيط لعرض الاسم */
+  .name-cell{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+  }
+  .name-cell b{ font-size:13px; }
+  .name-cell .mut{ font-size:12px; }
+
+  /* زر إجراءات ثانوي أنعم */
+  .btn.soft{
+    background:#fff;
+    color:var(--ink);
+    border:1px solid rgba(231,238,246,.95);
+    box-shadow:none;
+  }
+  .btn.soft:hover{ background:rgba(14,165,164,.04); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+
+  <div class="admin-head">
+    <div class="admin-title">
+      <h2>لوحة الإدارة</h2>
+      <div class="mut sub">بحث + فلاتر + إجراءات + تصدير النتائج + استيراد</div>
+    </div>
+
+    <div class="tabs">
+      <a class="tab primary" href="{% url 'quiz:staff_manage' %}">النتائج</a>
+      <a class="tab" href="{% url 'quiz:staff_import' %}">استيراد الأسئلة</a>
+      <a class="tab" href="{% url 'quiz:staff_import_participants' %}">استيراد المتقدمين</a>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi">
+      <div class="mut">إجمالي المحاولات (حسب الفلاتر)</div>
+      <b>{{ kpi.total }}</b>
+      <div class="tag">Total</div>
+    </div>
+    <div class="kpi">
+      <div class="mut">محاولات منتهية</div>
+      <b>{{ kpi.finished }}</b>
+      <div class="tag">Finished</div>
+    </div>
+    <div class="kpi">
+      <div class="mut">محاولات جارية</div>
+      <b>{{ kpi.running }}</b>
+      <div class="tag">Running</div>
+    </div>
+    <div class="kpi">
+      <div class="mut">متوسط الدرجة</div>
+      <b>{{ kpi.avg_score }}</b>
+      <div class="tag">Avg</div>
+    </div>
+  </div>
+
+  <div style="height:14px"></div>
+
+  <form method="get" class="glass filters">
+    <div class="filters-grid">
+      <div>
+        <span class="lbl">بحث (سجل/اسم)</span>
+        <input name="q" value="{{ filters.q }}" placeholder="اكتب السجل أو الاسم...">
+      </div>
+
+      <div>
+        <span class="lbl">الحالة</span>
+        <select name="status">
+          <option value="all" {% if filters.status == "all" %}selected{% endif %}>الكل</option>
+          <option value="finished" {% if filters.status == "finished" %}selected{% endif %}>منتهي</option>
+          <option value="running" {% if filters.status == "running" %}selected{% endif %}>جارٍ</option>
+        </select>
+      </div>
+
+      <div>
+        <span class="lbl">الاختبار</span>
+        <select name="quiz">
+          <option value="">الكل</option>
+          {% for z in quizzes %}
+            <option value="{{ z.id }}" {% if filters.quiz|stringformat:"s" == z.id|stringformat:"s" %}selected{% endif %}>
+              {{ z.title }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <span class="lbl">الترتيب</span>
+        <select name="sort">
+          <option value="-started_at" {% if filters.sort == "-started_at" %}selected{% endif %}>الأحدث</option>
+          <option value="started_at" {% if filters.sort == "started_at" %}selected{% endif %}>الأقدم</option>
+          <option value="-score" {% if filters.sort == "-score" %}selected{% endif %}>الأعلى درجة</option>
+          <option value="score" {% if filters.sort == "score" %}selected{% endif %}>الأقل درجة</option>
+        </select>
+      </div>
+
+      <button class="btn" type="submit">تطبيق</button>
+      <a class="btn soft" href="{% url 'quiz:staff_manage' %}">مسح</a>
+    </div>
+
+    <div class="export-row">
+      <div class="export-hint">
+        التصدير يحترم الفلاتر الحالية (إن وجدت).  
+        <span class="meta-chip">?{{ request.GET.urlencode|default:"(بدون فلاتر)" }}</span>
+      </div>
+
+      <div class="toolbar">
+        <a class="btn secondary" href="{% url 'quiz:staff_export_csv' %}?{{ request.GET.urlencode }}">تصدير CSV</a>
+        <a class="btn secondary" href="{% url 'quiz:staff_export_xlsx' %}?{{ request.GET.urlencode }}">تصدير Excel</a>
+        <a class="btn secondary" href="{% url 'quiz:staff_export_pdf' %}?{{ request.GET.urlencode }}">تصدير PDF</a>
+      </div>
+    </div>
+  </form>
+
+  <div style="height:14px"></div>
+
+  <div class="card table-wrap">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr class="mut">
+            <th style="min-width:120px;">السجل</th>
+            <th style="min-width:240px;">المتقدم</th>
+            <th style="min-width:180px;">الاختبار</th>
+            <th style="min-width:80px;">الدرجة</th>
+            <th style="min-width:110px;">الحالة</th>
+            <th style="min-width:190px;">الوقت</th>
+            <th style="min-width:250px;">إجراءات</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for a in attempts %}
+            <tr>
+              <td><b>{{ a.participant.national_id }}</b></td>
+
+              <td>
+                <div class="name-cell">
+                  <b>{{ a.participant.full_name|default:"—" }}</b>
+                  <div class="mut">
+                    {% if a.started_ip %}
+                      <span class="meta-chip">IP: {{ a.started_ip }}</span>
+                    {% else %}
+                      <span class="meta-chip">IP: —</span>
+                    {% endif %}
+                  </div>
+                </div>
+              </td>
+
+              <td>{{ a.quiz.title }}</td>
+
+              <td><b>{{ a.score }}</b></td>
+
+              <td>
+                {% if a.is_finished %}
+                  <span class="pill ok">منتهي</span>
+                {% else %}
+                  <span class="pill warn">جارٍ</span>
+                {% endif %}
+              </td>
+
+              <td>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  <span class="meta-chip">بدأ: {{ a.started_at|date:"Y-m-d H:i" }}</span>
+                  {% if a.finished_at %}
+                    <span class="meta-chip">انتهى: {{ a.finished_at|date:"Y-m-d H:i" }}</span>
+                  {% else %}
+                    <span class="meta-chip">انتهى: —</span>
+                  {% endif %}
+                </div>
+              </td>
+
+              <td>
+                <div class="actions">
+                  <a class="btn secondary small" href="{% url 'quiz:staff_attempt_detail' a.id %}">تفاصيل</a>
+
+                  {% if not a.is_finished %}
+                    <form method="post" action="{% url 'quiz:staff_attempt_finish' a.id %}" style="margin:0;">
+                      {% csrf_token %}
+                      <button class="btn soft small" type="submit"
+                              onclick="return confirm('تأكيد إنهاء المحاولة الجارية؟');">
+                        إنهاء
+                      </button>
+                    </form>
+                  {% endif %}
+
+                  <form method="post" action="{% url 'quiz:staff_attempt_reset' a.id %}" style="margin:0;"
+                        onsubmit="return confirm('تأكيد إعادة فتح الاختبار لهذا الموظف؟ سيتم حذف المحاولة الحالية.');">
+                    {% csrf_token %}
+                    <button class="btn danger small" type="submit">إعادة فتح</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+
+          {% empty %}
+            <tr>
+              <td colspan="7" class="mut" style="padding:14px;">
+                لا توجد نتائج حسب الفلاتر الحالية.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {# Pagination (يحافظ على الفلاتر ويضيف page بشكل صحيح بدون تكرار) #}
+    <div class="pagination">
+      <div class="mut">
+        صفحة {{ attempts.number }} من {{ attempts.paginator.num_pages }} — إجمالي المعروض: {{ attempts.paginator.count }}
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        {% with qs=request.GET.urlencode %}
+          {% if attempts.has_previous %}
+            <a class="btn secondary small" href="?{{ qs }}{% if qs %}&{% endif %}page={{ attempts.previous_page_number }}">السابق</a>
+          {% endif %}
+          {% if attempts.has_next %}
+            <a class="btn secondary small" href="?{{ qs }}{% if qs %}&{% endif %}page={{ attempts.next_page_number }}">التالي</a>
+          {% endif %}
+        {% endwith %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

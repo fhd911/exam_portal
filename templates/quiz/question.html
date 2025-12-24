@@ -1,0 +1,45 @@
+{% extends "quiz/base.html" %}
+{% block title %}سؤال {{ index }}{% endblock %}
+{% block content %}
+  <div class="card">
+    <div class="row">
+      <div><b>السؤال {{ index }}</b> <span class="mut">/ {{ total }}</span></div>
+      <div class="timer">الوقت المتبقي: <span id="t">{{ seconds }}</span> ث</div>
+    </div>
+
+    <hr style="border:0;border-top:1px solid var(--line);margin:14px 0;">
+
+    <h3 style="margin:0 0 10px 0;">{{ question.text }}</h3>
+
+    <form id="qForm" method="post">
+      {% csrf_token %}
+
+      {% for c in choices %}
+        <label class="opt">
+          <input type="radio" name="choice" value="{{ c.id }}">
+          {{ c.text }}
+        </label>
+      {% endfor %}
+
+      <div class="row" style="margin-top:12px;">
+        <div class="mut">ينتقل تلقائياً بعد انتهاء الوقت.</div>
+        <button class="btn" type="submit">التالي</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    let left = {{ seconds|safe }};
+    const tEl = document.getElementById("t");
+    const form = document.getElementById("qForm");
+
+    const timer = setInterval(() => {
+      left -= 1;
+      tEl.textContent = left;
+      if (left <= 0) {
+        clearInterval(timer);
+        form.submit();
+      }
+    }, 1000);
+  </script>
+{% endblock %}

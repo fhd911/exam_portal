@@ -1,0 +1,155 @@
+@staff_member_required
+@transaction.atomic
+def staff_import_participants_view(request: HttpRequest) -> HttpResponse:
+    """
+    استيراد بيانات المتقدمين من ملف Excel (.xlsx)
+    الشيت الافتراضي: participants
+
+    الأعمدة المطلوبة (غير حساسة لحالة الأحرف):
+      national_id, full_name, phone_last4
+
+    أعمدة اختيارية:
+      is_allowed (0/1 أو TRUE/FALSE)
+      has_taken_exam (0/1 أو TRUE/FALSE)
+
+    خيارات الفورم:
+      replace=1     => استبدال بدون حذف: يجعل الجميع غير مسموحين ثم يفعّل المستوردين
+      reset_taken=1 => تصفير has_taken_exam للمستورَدين فقط
+    """
+    if request.method == "POST":
+        sheet_name = (request.POST.get("sheet_name") or "participants").strip()
+        replace = request.POST.get("replace") == "1"
+        reset_taken = request.POST.get("reset_taken") == "1"
+        file = request.FILES.get("file")
+
+        if not file:
+            messages.error(request, "ارفع ملف Excel (.xlsx).")
+            return redirect("quiz:staff_import_participants")
+
+        if not file.name.lower().endswith(".xlsx"):
+            messages.error(request, "الملف يجب أن يكون بصيغة .xlsx")
+            return redirect("quiz:staff_import_participants")
+
+        try:
+            import openpyxl
+        except ImportError:
+            messages.error(request, "مكتبة openpyxl غير مثبتة. نفّذ: pip install openpyxl")
+            return redirect("quiz:staff_import_participants")
+
+        wb = openpyxl.load_workbook(file)
+        if sheet_name not in wb.sheetnames:
+            messages.error(request, f"الشيت '{sheet_name}' غير موجود. المتاح: {wb.sheetnames}")
+            return redirect("quiz:staff_import_participants")
+
+        ws = wb[sheet_name]
+        rows = list(ws.iter_rows(values_only=True))
+        if not rows:
+            messages.error(request, "الشيت فارغ.")
+            return redirect("quiz:staff_import_participants")
+
+        headers_raw = [h for h in rows[0]]
+        headers = [str(h).strip().lower() if h is not None else "" for h in headers_raw]
+
+        need = ["national_id", "full_name", "phone_last4"]
+        missing = [c for c in need if c not in headers]
+        if missing:
+            messages.error(request, f"أعمدة ناقصة: {missing} | الموجود: {headers_raw}")
+            return redirect("quiz:staff_import_participants")
+
+        idx = {h: headers.index(h) for h in need}
+
+        # optional columns
+        ix_allowed = headers.index("is_allowed") if "is_allowed" in headers else None
+        ix_taken = headers.index("has_taken_exam") if "has_taken_exam" in headers else None
+
+        def _cell_to_str(v) -> str:
+            if v is None:
+                return ""
+            # Excel قد يرجع أرقام كـ float
+            if isinstance(v, float):
+                if v.is_integer():
+                    return str(int(v))
+                return str(v).strip()
+            return str(v).strip()
+
+        def _to_bool(v, default: bool) -> bool:
+            if v is None:
+                return default
+            s = _cell_to_str(v).lower()
+            if s in ("1", "true", "yes", "y", "نعم", "صح"):
+                return True
+            if s in ("0", "false", "no", "n", "لا", "خطأ"):
+                return False
+            return default
+
+        def _extract_last4(v) -> str:
+            s = _cell_to_str(v)
+            digits = "".join(ch for ch in s if ch.isdigit())
+            if not digits:
+                return ""
+            # لو أحد حط رقم الجوال كامل، نأخذ آخر 4
+            return digits[-4:]
+
+        # ✅ استبدال بدون حذف: اقفل الجميع ثم فعّل المستوردين
+        if replace:
+            Participant.objects.all().update(is_allowed=False)
+
+        created = 0
+        updated = 0
+        skipped = 0
+
+        for _row_num, r in enumerate(rows[1:], start=2):
+            national_id = _cell_to_str(r[idx["national_id"]])
+            full_name = _cell_to_str(r[idx["full_name"]])
+            phone_last4 = _extract_last4(r[idx["phone_last4"]])
+
+            if not national_id:
+                skipped += 1
+                continue
+
+            # phone_last4: اختياري، لكن إذا موجود لازم 4 أرقام
+            if phone_last4 and (not phone_last4.isdigit() or len(phone_last4) != 4):
+                skipped += 1
+                continue
+
+            # في وضع replace: لازم تفعيل المستوردين مهما كان
+            if replace:
+                is_allowed = True
+            else:
+                is_allowed = _to_bool(r[ix_allowed] if ix_allowed is not None else None, True)
+
+            # has_taken_exam: في وضع reset_taken نُصفّر للمستورَدين
+            if reset_taken:
+                has_taken_exam = False
+            else:
+                has_taken_exam = _to_bool(r[ix_taken] if ix_taken is not None else None, False)
+
+            obj, was_created = Participant.objects.update_or_create(
+                national_id=national_id,
+                defaults={
+                    "full_name": full_name,
+                    "phone_last4": phone_last4,
+                    "is_allowed": is_allowed,
+                    "has_taken_exam": has_taken_exam,
+                }
+            )
+
+            if was_created:
+                created += 1
+            else:
+                updated += 1
+
+        extra = []
+        if replace:
+            extra.append("استبدال بدون حذف: تم جعل الجميع غير مسموحين ثم تفعيل المستوردين")
+        if reset_taken:
+            extra.append("تم تصفير حالة (نفّذ الاختبار) للمستورَدين")
+
+        msg = f"✅ تم الاستيراد بنجاح: (جدد {created}) (تحديث {updated}) (تجاهل {skipped})"
+        if extra:
+            msg += " | " + " — ".join(extra)
+
+        messages.success(request, msg)
+        return redirect("quiz:staff_manage")
+
+    return render(request, "quiz/staff_import_participants.html")

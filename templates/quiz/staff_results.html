@@ -1,0 +1,103 @@
+{% extends "quiz/base.html" %}
+{% block title %}نتائج الاختبار (الإدارة){% endblock %}
+
+{% block content %}
+  <div class="card">
+    <div class="row">
+      <h2 style="margin:0;">نتائج الاختبار</h2>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <!-- ✅ زر استيراد الأسئلة -->
+        <a class="btn"
+           href="{% url 'quiz:staff_import' %}"
+           style="text-decoration:none;display:inline-block;">
+          استيراد الأسئلة
+        </a>
+
+        <!-- زر تصدير CSV -->
+        <a class="btn"
+           href="{% url 'quiz:staff_results_csv' %}"
+           style="text-decoration:none;display:inline-block;">
+          تصدير CSV
+        </a>
+      </div>
+    </div>
+
+    <div style="height:12px"></div>
+
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr class="mut">
+          <th style="text-align:right;padding:10px;border-bottom:1px solid var(--line);">السجل</th>
+          <th style="text-align:right;padding:10px;border-bottom:1px solid var(--line);">الاسم</th>
+          <th style="text-align:right;padding:10px;border-bottom:1px solid var(--line);">الاختبار</th>
+          <th style="text-align:right;padding:10px;border-bottom:1px solid var(--line);">الدرجة</th>
+          <th style="text-align:right;padding:10px;border-bottom:1px solid var(--line);">الحالة</th>
+          <th style="text-align:right;padding:10px;border-bottom:1px solid var(--line);">وقت البدء</th>
+          <th style="text-align:right;padding:10px;border-bottom:1px solid var(--line);">وقت الانتهاء</th>
+          <th style="text-align:right;padding:10px;border-bottom:1px solid var(--line);">المدة</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for a in attempts %}
+          <tr>
+            <td style="padding:10px;border-bottom:1px solid var(--line);">
+              {{ a.participant.national_id }}
+            </td>
+
+            <td style="padding:10px;border-bottom:1px solid var(--line);">
+              {{ a.participant.full_name }}
+            </td>
+
+            <td style="padding:10px;border-bottom:1px solid var(--line);">
+              {{ a.quiz.title }}
+            </td>
+
+            <td style="padding:10px;border-bottom:1px solid var(--line);">
+              <b>{{ a.score }}</b>
+            </td>
+
+            <td style="padding:10px;border-bottom:1px solid var(--line);">
+              {% if a.is_finished %}
+                <span style="display:inline-block;padding:4px 10px;border-radius:999px;background:rgba(16,185,129,.12);color:#065f46;">
+                  منتهي
+                </span>
+              {% else %}
+                <span style="display:inline-block;padding:4px 10px;border-radius:999px;background:rgba(245,158,11,.14);color:#92400e;">
+                  جارٍ
+                </span>
+              {% endif %}
+            </td>
+
+            <td style="padding:10px;border-bottom:1px solid var(--line);">
+              {{ a.started_at|date:"Y-m-d H:i" }}
+            </td>
+
+            <td style="padding:10px;border-bottom:1px solid var(--line);">
+              {% if a.finished_at %}
+                {{ a.finished_at|date:"Y-m-d H:i" }}
+              {% else %}
+                <span class="mut">—</span>
+              {% endif %}
+            </td>
+
+            <td style="padding:10px;border-bottom:1px solid var(--line);">
+              {% if a.finished_at %}
+                {{ a.finished_at|timesince:a.started_at }}
+              {% else %}
+                <span class="mut">—</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" class="mut" style="padding:12px;">
+              لا توجد محاولات.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

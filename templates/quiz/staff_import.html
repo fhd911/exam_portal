@@ -1,0 +1,142 @@
+{% extends "quiz/base.html" %}
+{% block title %}استيراد الأسئلة{% endblock %}
+
+{% block content %}
+  <div class="card" style="max-width:860px;margin:0 auto;">
+    <div class="row" style="align-items:flex-start;">
+      <div>
+        <h2 style="margin:0;">استيراد الأسئلة (Excel)</h2>
+
+        <div class="mut" style="margin-top:6px;line-height:1.9;">
+          الأعمدة المطلوبة داخل شيت <b>questions</b> (غير حساسة لحالة الأحرف):
+          <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;">
+            <span class="pill ok">order</span>
+            <span class="pill ok">question</span>
+            <span class="pill ok">A</span>
+            <span class="pill ok">B</span>
+            <span class="pill ok">C</span>
+            <span class="pill ok">D</span>
+            <span class="pill warn">correct</span>
+          </div>
+
+          <div style="margin-top:10px;">
+            <span class="pill warn">correct</span>
+            يجب أن تكون قيمته: <b>A</b> أو <b>B</b> أو <b>C</b> أو <b>D</b>
+          </div>
+
+          <div style="margin-top:10px;" class="mut">
+            ملاحظة: الصف الأول في الشيت يجب أن يحتوي عناوين الأعمدة.
+          </div>
+        </div>
+      </div>
+
+      <a class="btn secondary" href="{% url 'quiz:staff_manage' %}" style="white-space:nowrap;">
+        رجوع للوحة الإدارة
+      </a>
+    </div>
+
+    <div style="height:14px;"></div>
+
+    <form method="post" enctype="multipart/form-data" style="display:grid;gap:12px;">
+      {% csrf_token %}
+
+      <div class="card" style="padding:14px;background:rgba(255,255,255,.9);">
+        <div class="mut" style="font-weight:900;margin-bottom:10px;">بيانات الاستيراد</div>
+
+        <div class="grid2">
+          <div>
+            <label class="mut lbl">اختر الاختبار (Quiz)</label>
+            <select name="quiz_id" required>
+              <option value="">— اختر —</option>
+              {% for q in quizzes %}
+                <option value="{{ q.id }}">{{ q.title }} (ID={{ q.id }})</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <label class="mut lbl">اسم الشيت</label>
+            <input type="text" name="sheet_name" value="questions" placeholder="questions">
+          </div>
+        </div>
+
+        <div style="height:10px;"></div>
+
+        <div class="upload-box">
+          <div class="row" style="align-items:center;">
+            <div>
+              <div style="font-weight:900;">ملف Excel (.xlsx)</div>
+              <div class="mut" style="margin-top:4px;">ارفع الملف ثم اضغط “استيراد الآن”.</div>
+            </div>
+          </div>
+
+          <div style="height:10px;"></div>
+
+          <input id="fileInput" type="file" name="file" accept=".xlsx" required>
+
+          <div id="fileHint" class="mut" style="margin-top:8px;">
+            لم يتم اختيار ملف بعد.
+          </div>
+        </div>
+
+        <div style="height:10px;"></div>
+
+        <label class="opt-row">
+          <input type="checkbox" name="replace" value="1" style="width:auto;transform:translateY(1px);">
+          <span style="font-weight:900;">
+            استبدال الأسئلة الحالية (حذف السابق واستيراد الجديد)
+            <span class="mut" style="font-weight:700;">— استخدمها فقط عند التحديث الكامل</span>
+          </span>
+        </label>
+      </div>
+
+      <div class="row">
+        <button class="btn" type="submit">استيراد الآن</button>
+
+        <div class="mut" style="text-align:left;">
+          بعد الاستيراد سيتم تحويلك تلقائياً إلى لوحة الإدارة.
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <style>
+    .lbl{display:block;margin-bottom:8px;font-weight:900;}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    @media (max-width: 720px){ .grid2{grid-template-columns:1fr;} }
+
+    .upload-box{
+      border:1px dashed rgba(14,165,164,.35);
+      border-radius:18px;
+      padding:14px;
+      background: radial-gradient(600px 200px at 10% 0%, rgba(16,185,129,.10), transparent 55%),
+                  rgba(255,255,255,.95);
+      box-shadow: 0 10px 22px rgba(2,44,34,.06);
+    }
+
+    .opt-row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      padding:10px 12px;
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:#fff;
+    }
+  </style>
+
+  <script>
+    (function(){
+      const inp = document.getElementById("fileInput");
+      const hint = document.getElementById("fileHint");
+      if(!inp || !hint) return;
+      inp.addEventListener("change", () => {
+        if(inp.files && inp.files.length){
+          hint.textContent = "تم اختيار: " + inp.files[0].name;
+        }else{
+          hint.textContent = "لم يتم اختيار ملف بعد.";
+        }
+      });
+    })();
+  </script>
+{% endblock %}

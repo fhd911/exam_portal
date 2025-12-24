@@ -1,0 +1,88 @@
+{% extends "quiz/base.html" %}
+{% block title %}تفاصيل المحاولة{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="row">
+    <div>
+      <h2 style="margin:0;">تفاصيل المحاولة</h2>
+      <div class="mut" style="margin-top:6px;">
+        السجل: <b>{{ attempt.participant.national_id }}</b> —
+        الاسم: <b>{{ attempt.participant.full_name|default:"—" }}</b> —
+        الاختبار: <b>{{ attempt.quiz.title }}</b>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <a class="btn secondary" href="{% url 'quiz:staff_manage' %}">رجوع للوحة</a>
+
+      <form method="post" action="{% url 'quiz:staff_attempt_reset' attempt.id %}" style="margin:0;"
+            onsubmit="return confirm('تأكيد إعادة فتح الاختبار؟');">
+        {% csrf_token %}
+        <button class="btn danger" type="submit">إعادة فتح</button>
+      </form>
+    </div>
+  </div>
+
+  <div style="height:14px"></div>
+
+  <div class="kpis" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+    <div class="kpi">
+      <div class="mut">الدرجة</div>
+      <b>{{ attempt.score }}</b>
+      <div class="tag">Score</div>
+    </div>
+    <div class="kpi">
+      <div class="mut">الحالة</div>
+      <b>{% if attempt.is_finished %}منتهي{% else %}جارٍ{% endif %}</b>
+      <div class="tag">Status</div>
+    </div>
+    <div class="kpi">
+      <div class="mut">بدأ</div>
+      <b style="font-size:16px">{{ attempt.started_at|date:"Y-m-d H:i" }}</b>
+      <div class="tag">Started</div>
+    </div>
+  </div>
+
+  <div style="height:14px"></div>
+
+  <div class="card" style="padding:0; overflow:hidden;">
+    <div style="overflow:auto;">
+      <table>
+        <thead>
+          <tr class="mut">
+            <th style="min-width:80px;">#</th>
+            <th style="min-width:360px;">السؤال</th>
+            <th style="min-width:220px;">إجابة الموظف</th>
+            <th style="min-width:220px;">الإجابة الصحيحة</th>
+            <th style="min-width:120px;">النتيجة</th>
+            <th style="min-width:120px;">الوقت (ث)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr>
+              <td><b>{{ r.order }}</b></td>
+              <td>{{ r.question }}</td>
+              <td>{{ r.selected }}</td>
+              <td>{{ r.correct }}</td>
+              <td>
+                {% if r.is_late %}
+                  <span class="pill bad">متأخر</span>
+                {% elif r.is_correct %}
+                  <span class="pill ok">صحيح</span>
+                {% else %}
+                  <span class="pill warn">خطأ</span>
+                {% endif %}
+              </td>
+              <td>{{ r.spent|default:"—" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="mut" style="padding:14px;">لا توجد إجابات مسجلة.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
