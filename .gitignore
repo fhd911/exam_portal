@@ -1,18 +1,22 @@
-@"
 # Python / venv
 .venv/
 venv/
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
 
 # Django
 db.sqlite3
+*.sqlite3
 *.log
 media/
 staticfiles/
 
-# OS/IDE
+# Env
+.env
+.env.*
+
+# OS / IDE
 .vscode/
 .idea/
 .DS_Store
-"@ | Out-File -Encoding utf8 .gitignore
