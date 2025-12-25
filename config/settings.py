@@ -3,12 +3,9 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ======================================================
-# ✅ Env / .env
-# ======================================================
-# تحميل ملف .env محلياً (اختياري)
+# .env (اختياري)
 try:
-    from dotenv import load_dotenv  # pip install python-dotenv
+    from dotenv import load_dotenv
     load_dotenv(BASE_DIR / ".env")
 except Exception:
     pass
@@ -16,13 +13,9 @@ except Exception:
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-change-me-in-prod")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
-# ALLOWED_HOSTS من env مثل: "127.0.0.1,localhost,example.com"
-_hosts = os.environ.get("DJANGO_ALLOWED_HOSTS", "")
-ALLOWED_HOSTS = [h.strip() for h in _hosts.split(",") if h.strip()] if _hosts else []
+_hosts = os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
+ALLOWED_HOSTS = [h.strip() for h in _hosts.split(",") if h.strip()]
 
-# ======================================================
-# Apps
-# ======================================================
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -33,9 +26,6 @@ INSTALLED_APPS = [
     "quiz",
 ]
 
-# ======================================================
-# Middleware
-# ======================================================
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -48,9 +38,6 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "config.urls"
 
-# ======================================================
-# Templates
-# ======================================================
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -68,19 +55,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# ======================================================
-# Database
-# ======================================================
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}
 }
 
-# ======================================================
-# Password validation
-# ======================================================
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -88,17 +66,12 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# ======================================================
-# i18n / time
-# ======================================================
 LANGUAGE_CODE = "ar"
 TIME_ZONE = "Asia/Riyadh"
 USE_I18N = True
 USE_TZ = True
 
-# ======================================================
-# Static
-# ======================================================
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

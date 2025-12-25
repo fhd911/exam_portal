@@ -17,30 +17,16 @@
       <a class="btn secondary" href="{% url 'quiz:staff_manage' %}">رجوع للوحة</a>
 
       <form method="post" action="{% url 'quiz:staff_attempt_reset' attempt.id %}" style="margin:0;"
-            onsubmit="return confirm('تأكيد إعادة فتح الاختبار؟');">
+            data-confirm="1"
+            data-confirm-title="إعادة فتح الاختبار"
+            data-confirm-message="تأكيد إعادة فتح الاختبار؟"
+            data-confirm-sub="سيتم حذف المحاولة الحالية وإتاحة الاختبار من جديد."
+            data-confirm-ok="إعادة فتح"
+            data-confirm-cancel="إلغاء"
+            data-confirm-danger="1">
         {% csrf_token %}
         <button class="btn danger" type="submit">إعادة فتح</button>
       </form>
-    </div>
-  </div>
-
-  <div style="height:14px"></div>
-
-  <div class="kpis" style="grid-template-columns:repeat(3,minmax(0,1fr));">
-    <div class="kpi">
-      <div class="mut">الدرجة</div>
-      <b>{{ attempt.score }}</b>
-      <div class="tag">Score</div>
-    </div>
-    <div class="kpi">
-      <div class="mut">الحالة</div>
-      <b>{% if attempt.is_finished %}منتهي{% else %}جارٍ{% endif %}</b>
-      <div class="tag">Status</div>
-    </div>
-    <div class="kpi">
-      <div class="mut">بدأ</div>
-      <b style="font-size:16px">{{ attempt.started_at|date:"Y-m-d H:i" }}</b>
-      <div class="tag">Started</div>
     </div>
   </div>
 

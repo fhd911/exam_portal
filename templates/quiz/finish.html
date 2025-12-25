@@ -1,8 +1,9 @@
 {% extends "quiz/base.html" %}
-{% block title %}تم{% endblock %}
+{% block title %}تم الإنهاء{% endblock %}
+
 {% block content %}
-  <div class="card">
-    <h2>تم استلام إجاباتك ✅</h2>
-    <p class="mut">شكرًا لك. سيتم عرض النتائج للإدارة فقط.</p>
-  </div>
+<div class="card" style="max-width:860px;margin:0 auto;text-align:center;padding:26px;">
+  <div style="font-size:22px;font-weight:900;">✅ تم إنهاء الاختبار</div>
+  <div class="mut" style="margin-top:8px;">نشكرك، تم تسجيل نتيجتك بنجاح.</div>
+</div>
 {% endblock %}

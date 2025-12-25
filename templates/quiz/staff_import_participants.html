@@ -1,155 +1,67 @@
-@staff_member_required
-@transaction.atomic
-def staff_import_participants_view(request: HttpRequest) -> HttpResponse:
-    """
-    استيراد بيانات المتقدمين من ملف Excel (.xlsx)
-    الشيت الافتراضي: participants
+{% extends "quiz/base.html" %}
+{% block title %}استيراد المتقدمين{% endblock %}
 
-    الأعمدة المطلوبة (غير حساسة لحالة الأحرف):
-      national_id, full_name, phone_last4
+{% block content %}
+<div class="card" style="max-width:860px;margin:0 auto;">
+  <div class="row" style="align-items:flex-start;">
+    <div>
+      <h2 style="margin:0;">استيراد المتقدمين (Excel)</h2>
+      <div class="mut" style="margin-top:6px;line-height:1.9;">
+        الأعمدة المطلوبة داخل شيت <b>participants</b>:
+        <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;">
+          <span class="pill ok">national_id</span>
+          <span class="pill ok">full_name</span>
+          <span class="pill ok">phone_last4</span>
+          <span class="pill warn">is_allowed (اختياري)</span>
+          <span class="pill warn">has_taken_exam (اختياري)</span>
+        </div>
+      </div>
+    </div>
 
-    أعمدة اختيارية:
-      is_allowed (0/1 أو TRUE/FALSE)
-      has_taken_exam (0/1 أو TRUE/FALSE)
+    <a class="btn secondary" href="{% url 'quiz:staff_manage' %}" style="white-space:nowrap;">رجوع للوحة الإدارة</a>
+  </div>
 
-    خيارات الفورم:
-      replace=1     => استبدال بدون حذف: يجعل الجميع غير مسموحين ثم يفعّل المستوردين
-      reset_taken=1 => تصفير has_taken_exam للمستورَدين فقط
-    """
-    if request.method == "POST":
-        sheet_name = (request.POST.get("sheet_name") or "participants").strip()
-        replace = request.POST.get("replace") == "1"
-        reset_taken = request.POST.get("reset_taken") == "1"
-        file = request.FILES.get("file")
+  <div style="height:14px;"></div>
 
-        if not file:
-            messages.error(request, "ارفع ملف Excel (.xlsx).")
-            return redirect("quiz:staff_import_participants")
+  <form method="post" enctype="multipart/form-data" style="display:grid;gap:12px;">
+    {% csrf_token %}
 
-        if not file.name.lower().endswith(".xlsx"):
-            messages.error(request, "الملف يجب أن يكون بصيغة .xlsx")
-            return redirect("quiz:staff_import_participants")
+    <div class="card" style="padding:14px;background:rgba(255,255,255,.9);">
+      <div class="mut" style="font-weight:900;margin-bottom:10px;">خيارات الاستيراد</div>
 
-        try:
-            import openpyxl
-        except ImportError:
-            messages.error(request, "مكتبة openpyxl غير مثبتة. نفّذ: pip install openpyxl")
-            return redirect("quiz:staff_import_participants")
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label class="mut" style="font-weight:900;margin-bottom:8px;display:block;">اسم الشيت</label>
+          <input type="text" name="sheet_name" value="participants">
+        </div>
 
-        wb = openpyxl.load_workbook(file)
-        if sheet_name not in wb.sheetnames:
-            messages.error(request, f"الشيت '{sheet_name}' غير موجود. المتاح: {wb.sheetnames}")
-            return redirect("quiz:staff_import_participants")
+        <div>
+          <label class="mut" style="font-weight:900;margin-bottom:8px;display:block;">ملف Excel</label>
+          <input type="file" name="file" accept=".xlsx" required>
+        </div>
+      </div>
 
-        ws = wb[sheet_name]
-        rows = list(ws.iter_rows(values_only=True))
-        if not rows:
-            messages.error(request, "الشيت فارغ.")
-            return redirect("quiz:staff_import_participants")
+      <div style="height:10px;"></div>
 
-        headers_raw = [h for h in rows[0]]
-        headers = [str(h).strip().lower() if h is not None else "" for h in headers_raw]
+      <label style="display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:16px;background:#fff;">
+        <input type="checkbox" name="replace" value="1" style="width:auto;transform:translateY(1px);">
+        <span style="font-weight:900;">
+          replace=1 (استبدال بدون حذف) — يجعل الجميع غير مسموحين ثم يفعّل المستوردين
+        </span>
+      </label>
 
-        need = ["national_id", "full_name", "phone_last4"]
-        missing = [c for c in need if c not in headers]
-        if missing:
-            messages.error(request, f"أعمدة ناقصة: {missing} | الموجود: {headers_raw}")
-            return redirect("quiz:staff_import_participants")
+      <label style="display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:16px;background:#fff;margin-top:10px;">
+        <input type="checkbox" name="reset_taken" value="1" style="width:auto;transform:translateY(1px);">
+        <span style="font-weight:900;">
+          reset_taken=1 — تصفير has_taken_exam للمستورَدين فقط
+        </span>
+      </label>
+    </div>
 
-        idx = {h: headers.index(h) for h in need}
-
-        # optional columns
-        ix_allowed = headers.index("is_allowed") if "is_allowed" in headers else None
-        ix_taken = headers.index("has_taken_exam") if "has_taken_exam" in headers else None
-
-        def _cell_to_str(v) -> str:
-            if v is None:
-                return ""
-            # Excel قد يرجع أرقام كـ float
-            if isinstance(v, float):
-                if v.is_integer():
-                    return str(int(v))
-                return str(v).strip()
-            return str(v).strip()
-
-        def _to_bool(v, default: bool) -> bool:
-            if v is None:
-                return default
-            s = _cell_to_str(v).lower()
-            if s in ("1", "true", "yes", "y", "نعم", "صح"):
-                return True
-            if s in ("0", "false", "no", "n", "لا", "خطأ"):
-                return False
-            return default
-
-        def _extract_last4(v) -> str:
-            s = _cell_to_str(v)
-            digits = "".join(ch for ch in s if ch.isdigit())
-            if not digits:
-                return ""
-            # لو أحد حط رقم الجوال كامل، نأخذ آخر 4
-            return digits[-4:]
-
-        # ✅ استبدال بدون حذف: اقفل الجميع ثم فعّل المستوردين
-        if replace:
-            Participant.objects.all().update(is_allowed=False)
-
-        created = 0
-        updated = 0
-        skipped = 0
-
-        for _row_num, r in enumerate(rows[1:], start=2):
-            national_id = _cell_to_str(r[idx["national_id"]])
-            full_name = _cell_to_str(r[idx["full_name"]])
-            phone_last4 = _extract_last4(r[idx["phone_last4"]])
-
-            if not national_id:
-                skipped += 1
-                continue
-
-            # phone_last4: اختياري، لكن إذا موجود لازم 4 أرقام
-            if phone_last4 and (not phone_last4.isdigit() or len(phone_last4) != 4):
-                skipped += 1
-                continue
-
-            # في وضع replace: لازم تفعيل المستوردين مهما كان
-            if replace:
-                is_allowed = True
-            else:
-                is_allowed = _to_bool(r[ix_allowed] if ix_allowed is not None else None, True)
-
-            # has_taken_exam: في وضع reset_taken نُصفّر للمستورَدين
-            if reset_taken:
-                has_taken_exam = False
-            else:
-                has_taken_exam = _to_bool(r[ix_taken] if ix_taken is not None else None, False)
-
-            obj, was_created = Participant.objects.update_or_create(
-                national_id=national_id,
-                defaults={
-                    "full_name": full_name,
-                    "phone_last4": phone_last4,
-                    "is_allowed": is_allowed,
-                    "has_taken_exam": has_taken_exam,
-                }
-            )
-
-            if was_created:
-                created += 1
-            else:
-                updated += 1
-
-        extra = []
-        if replace:
-            extra.append("استبدال بدون حذف: تم جعل الجميع غير مسموحين ثم تفعيل المستوردين")
-        if reset_taken:
-            extra.append("تم تصفير حالة (نفّذ الاختبار) للمستورَدين")
-
-        msg = f"✅ تم الاستيراد بنجاح: (جدد {created}) (تحديث {updated}) (تجاهل {skipped})"
-        if extra:
-            msg += " | " + " — ".join(extra)
-
-        messages.success(request, msg)
-        return redirect("quiz:staff_manage")
-
-    return render(request, "quiz/staff_import_participants.html")
+    <div class="row">
+      <button class="btn" type="submit">استيراد الآن</button>
+      <div class="mut" style="text-align:left;">بعد الاستيراد سيتم تحويلك إلى لوحة الإدارة.</div>
+    </div>
+  </form>
+</div>
+{% endblock %}

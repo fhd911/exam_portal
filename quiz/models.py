@@ -1,148 +1,78 @@
 from __future__ import annotations
-
 from django.db import models
-from django.utils import timezone
 
 
-# ======================================================
-# المشاركون (الموظفون/المتقدمون)
-# ======================================================
-class Participant(models.Model):
-    national_id = models.CharField("السجل المدني", max_length=20, unique=True, db_index=True)
-    full_name = models.CharField("الاسم", max_length=200, blank=True, default="")
-    phone_last4 = models.CharField("آخر 4 أرقام من الجوال", max_length=4, blank=True, default="")
-
-    is_allowed = models.BooleanField("مسموح له بالدخول", default=True)
-    has_taken_exam = models.BooleanField("نفّذ الاختبار سابقاً", default=False)
-
-    class Meta:
-        verbose_name = "مشارك"
-        verbose_name_plural = "المشاركون"
-        ordering = ["full_name", "national_id"]
-
-    def __str__(self) -> str:
-        return f"{self.full_name} ({self.national_id})" if self.full_name else self.national_id
-
-
-# ======================================================
-# الاختبار
-# ======================================================
 class Quiz(models.Model):
-    title = models.CharField("عنوان الاختبار", max_length=200)
-    time_per_question_seconds = models.PositiveIntegerField("مدة السؤال (ثانية)", default=30)
-    is_active = models.BooleanField("نشط", default=True)
-
-    class Meta:
-        verbose_name = "اختبار"
-        verbose_name_plural = "الاختبارات"
-        ordering = ["-id"]
+    title = models.CharField(max_length=200, verbose_name="عنوان الاختبار")
+    is_active = models.BooleanField(default=False, verbose_name="نشط")
+    time_per_question_seconds = models.PositiveIntegerField(default=30, verbose_name="زمن السؤال (ث)")
 
     def __str__(self) -> str:
         return self.title
 
 
-# ======================================================
-# الأسئلة
-# ======================================================
-class Question(models.Model):
-    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="questions", verbose_name="الاختبار")
-    text = models.TextField("نص السؤال")
-    order = models.PositiveIntegerField("الترتيب", default=0)
+class Participant(models.Model):
+    national_id = models.CharField(max_length=20, unique=True, verbose_name="السجل")
+    full_name = models.CharField(max_length=255, blank=True, default="", verbose_name="الاسم")
+    phone_last4 = models.CharField(max_length=4, blank=True, default="", verbose_name="آخر 4 من الجوال")
+    is_allowed = models.BooleanField(default=True, verbose_name="مسموح")
+    has_taken_exam = models.BooleanField(default=False, verbose_name="نفّذ الاختبار")
+
+    def __str__(self) -> str:
+        return f"{self.national_id} - {self.full_name or ''}".strip()
+
+
+class Attempt(models.Model):
+    participant = models.ForeignKey(Participant, on_delete=models.CASCADE, related_name="attempts")
+    quiz = models.ForeignKey(Quiz, on_delete=models.PROTECT, related_name="attempts")
+
+    score = models.IntegerField(default=0)
+    current_index = models.IntegerField(default=0)
+
+    is_finished = models.BooleanField(default=False)
+    started_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    session_key = models.CharField(max_length=64, blank=True, default="")
+    started_ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=255, blank=True, default="")
 
     class Meta:
-        verbose_name = "سؤال"
-        verbose_name_plural = "الأسئلة"
+        ordering = ["-started_at"]
+
+    def __str__(self) -> str:
+        return f"{self.participant.national_id} / {self.quiz.title} / {self.score}"
+
+
+class Question(models.Model):
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="questions")
+    text = models.TextField()
+    order = models.IntegerField(default=0)
+
+    class Meta:
         ordering = ["order", "id"]
 
     def __str__(self) -> str:
-        return self.text[:60]
+        return f"Q{self.order}: {self.text[:40]}"
 
 
-# ======================================================
-# الخيارات
-# ======================================================
 class Choice(models.Model):
-    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="choices", verbose_name="السؤال")
-    text = models.CharField("الخيار", max_length=300)
-    is_correct = models.BooleanField("إجابة صحيحة", default=False)
-
-    class Meta:
-        verbose_name = "خيار"
-        verbose_name_plural = "الخيارات"
-        ordering = ["id"]
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="choices")
+    text = models.CharField(max_length=500)
+    is_correct = models.BooleanField(default=False)
 
     def __str__(self) -> str:
-        return self.text
+        return self.text[:40]
 
 
-# ======================================================
-# المحاولة
-# ======================================================
-class Attempt(models.Model):
-    participant = models.ForeignKey(
-        Participant,
-        on_delete=models.PROTECT,
-        related_name="attempts",
-        verbose_name="المشارك",
-    )
-    quiz = models.ForeignKey(
-        Quiz,
-        on_delete=models.PROTECT,
-        related_name="attempts",
-        verbose_name="الاختبار",
-    )
-
-    started_at = models.DateTimeField("بدأ في", default=timezone.now)
-    finished_at = models.DateTimeField("انتهى في", null=True, blank=True)
-
-    # ✅ لمنع تعدد الجلسات + توثيق
-    session_key = models.CharField("مفتاح الجلسة", max_length=64, blank=True, default="", db_index=True)
-    started_ip = models.GenericIPAddressField("IP", null=True, blank=True)
-    user_agent = models.CharField("User-Agent", max_length=255, blank=True, default="")
-
-    current_index = models.PositiveIntegerField("مؤشر السؤال الحالي", default=0)
-    score = models.PositiveIntegerField("الدرجة", default=0)
-    is_finished = models.BooleanField("منتهي", default=False)
-
-    class Meta:
-        verbose_name = "محاولة"
-        verbose_name_plural = "المحاولات"
-        ordering = ["-started_at", "-id"]
-        indexes = [
-            models.Index(fields=["quiz", "is_finished"]),
-            models.Index(fields=["participant", "is_finished"]),
-        ]
-
-    def __str__(self) -> str:
-        return f"{self.participant} - {self.quiz}"
-
-
-# ======================================================
-# الإجابة
-# ======================================================
 class Answer(models.Model):
-    attempt = models.ForeignKey(Attempt, on_delete=models.CASCADE, related_name="answers", verbose_name="المحاولة")
-    question = models.ForeignKey(Question, on_delete=models.PROTECT, verbose_name="السؤال")
-    selected_choice = models.ForeignKey(
-        Choice,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        verbose_name="الإجابة المختارة",
-    )
+    attempt = models.ForeignKey(Attempt, on_delete=models.CASCADE, related_name="answers")
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="answers")
 
-    started_at = models.DateTimeField("بداية السؤال", default=timezone.now)
-    answered_at = models.DateTimeField("وقت الإجابة", null=True, blank=True)
-
-    is_late = models.BooleanField("متأخر", default=False)
+    selected_choice = models.ForeignKey(Choice, on_delete=models.SET_NULL, null=True, blank=True)
+    started_at = models.DateTimeField()
+    answered_at = models.DateTimeField(null=True, blank=True)
+    is_late = models.BooleanField(default=False)
 
     class Meta:
-        verbose_name = "إجابة"
-        verbose_name_plural = "الإجابات"
-        constraints = [
-            models.UniqueConstraint(fields=["attempt", "question"], name="uniq_attempt_question")
-        ]
-        ordering = ["id"]
-
-    def __str__(self) -> str:
-        return f"إجابة ({self.attempt_id}) - سؤال ({self.question_id})"
+        unique_together = ("attempt", "question")

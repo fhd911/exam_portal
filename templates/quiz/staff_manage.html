@@ -3,142 +3,61 @@
 
 {% block extra_head %}
 <style>
-  .admin-head{
-    display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap;
-    margin-bottom:12px;
-  }
-  .admin-title h2{ margin:0; }
-  .admin-title .sub{ margin-top:6px; }
-
-  .tabs{
-    display:flex; gap:8px; flex-wrap:wrap;
-  }
+  .admin-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .admin-title .sub{margin-top:6px;}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;}
   .tab{
-    display:inline-flex; align-items:center; gap:8px;
-    padding:9px 12px;
-    border-radius:999px;
+    display:inline-flex;align-items:center;gap:8px;
+    padding:9px 12px;border-radius:999px;
     border:1px solid rgba(231,238,246,.95);
     background:rgba(255,255,255,.92);
-    color:var(--ink);
-    text-decoration:none;
-    font-weight:900;
-    font-size:12px;
+    color:var(--ink);text-decoration:none;font-weight:900;font-size:12px;
     box-shadow: 0 8px 18px rgba(2,44,34,.06);
   }
-  .tab.primary{
-    background: linear-gradient(135deg, rgba(14,165,164,.95), rgba(16,185,129,.95));
-    color:#fff;
-    border-color: rgba(14,165,164,.25);
-  }
+  .tab.primary{background: linear-gradient(135deg, rgba(14,165,164,.95), rgba(16,185,129,.95));color:#fff;border-color: rgba(14,165,164,.25);}
+  .glass{background:rgba(255,255,255,.78);border:1px solid rgba(231,238,246,.95);border-radius:22px;box-shadow: var(--shadow2);}
+  .filters{padding:12px;}
+  .filters-grid{display:grid;grid-template-columns: 1.6fr .8fr .9fr .9fr auto auto;gap:10px;align-items:end;}
+  @media (max-width: 980px){.filters-grid{grid-template-columns:1fr 1fr;}}
+  @media (max-width: 520px){.filters-grid{grid-template-columns:1fr;}}
+  .lbl{display:block;margin-bottom:6px;font-weight:900;color:var(--mut);font-size:12.2px;}
+  .export-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:10px 0 0;}
+  .export-hint{color:var(--mut);font-size:12.2px;line-height:1.8;}
+  .meta-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:11.3px;font-weight:900;border:1px solid rgba(231,238,246,.95);background:#fff;color:var(--mut);white-space:nowrap;}
 
-  .toolbar{
-    display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-end;
-  }
+  .pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-top:1px solid rgba(231,238,246,.95);background: rgba(255,255,255,.92);}
 
-  .glass{
-    background:rgba(255,255,255,.78);
+  .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0 0}
+  @media (max-width: 980px){ .kpis{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  @media (max-width: 540px){ .kpis{grid-template-columns:1fr;} }
+  .kpi{
+    border-radius:18px;padding:12px 12px;
+    background:
+      radial-gradient(420px 150px at 0% 0%, rgba(14,165,164,.10), transparent 55%),
+      radial-gradient(420px 150px at 100% 0%, rgba(16,185,129,.10), transparent 55%),
+      #fff;
     border:1px solid rgba(231,238,246,.95);
-    border-radius:22px;
-    box-shadow: var(--shadow2);
+    box-shadow:var(--shadow2);
   }
+  .kpi b{font-size:20px}
+  .kpi .tag{display:inline-block;margin-top:7px;padding:4px 9px;border-radius:999px;font-size:11.5px;border:1px solid var(--line);color:var(--mut);background:#fff}
 
-  .filters{
-    padding:12px;
-  }
-  .filters-grid{
-    display:grid;
-    grid-template-columns: 1.6fr .8fr .9fr .9fr auto auto;
-    gap:10px;
-    align-items:end;
-  }
-  @media (max-width: 980px){
-    .filters-grid{ grid-template-columns: 1fr 1fr; }
-  }
-  @media (max-width: 520px){
-    .filters-grid{ grid-template-columns: 1fr; }
-  }
+  .name-cell{display:flex;flex-direction:column;gap:3px;}
+  .name-cell b{font-size:13px;}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .btn.soft{background:#fff;color:var(--ink);border:1px solid rgba(231,238,246,.95);box-shadow:none;}
+  .btn.soft:hover{background:rgba(14,165,164,.04);}
 
-  .lbl{
-    display:block;
-    margin-bottom:6px;
-    font-weight:900;
-    color:var(--mut);
-    font-size:12.2px;
-  }
-
-  .export-row{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    align-items:center;
-    justify-content:space-between;
-    margin: 10px 0 0;
-  }
-  .export-hint{
-    color:var(--mut);
-    font-size:12.2px;
-    line-height:1.8;
-  }
-
+  /* ✅ حاوية الجدول: شريط تمرير أجمل + مسافة تحته */
   .table-wrap{
-    padding:0;
-    overflow:hidden;
-  }
-  .table-scroll{
     overflow:auto;
+    padding-bottom:8px; /* يخلي scrollbar ما يلصق بالقاع */
   }
-
-  .meta-chip{
-    display:inline-flex; align-items:center; gap:6px;
-    padding:4px 10px;
-    border-radius:999px;
-    font-size:11.3px;
-    font-weight:900;
-    border:1px solid rgba(231,238,246,.95);
-    background:#fff;
-    color:var(--mut);
-    white-space:nowrap;
-  }
-
-  .actions{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-  }
-
-  .pagination{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    padding:12px 14px;
-    border-top:1px solid rgba(231,238,246,.95);
-    background: rgba(255,255,255,.92);
-  }
-
-  /* تحسين بسيط لعرض الاسم */
-  .name-cell{
-    display:flex;
-    flex-direction:column;
-    gap:3px;
-  }
-  .name-cell b{ font-size:13px; }
-  .name-cell .mut{ font-size:12px; }
-
-  /* زر إجراءات ثانوي أنعم */
-  .btn.soft{
-    background:#fff;
-    color:var(--ink);
-    border:1px solid rgba(231,238,246,.95);
-    box-shadow:none;
-  }
-  .btn.soft:hover{ background:rgba(14,165,164,.04); }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="card">
-
   <div class="admin-head">
     <div class="admin-title">
       <h2>لوحة الإدارة</h2>
@@ -153,26 +72,10 @@
   </div>
 
   <div class="kpis">
-    <div class="kpi">
-      <div class="mut">إجمالي المحاولات (حسب الفلاتر)</div>
-      <b>{{ kpi.total }}</b>
-      <div class="tag">Total</div>
-    </div>
-    <div class="kpi">
-      <div class="mut">محاولات منتهية</div>
-      <b>{{ kpi.finished }}</b>
-      <div class="tag">Finished</div>
-    </div>
-    <div class="kpi">
-      <div class="mut">محاولات جارية</div>
-      <b>{{ kpi.running }}</b>
-      <div class="tag">Running</div>
-    </div>
-    <div class="kpi">
-      <div class="mut">متوسط الدرجة</div>
-      <b>{{ kpi.avg_score }}</b>
-      <div class="tag">Avg</div>
-    </div>
+    <div class="kpi"><div class="mut">إجمالي المحاولات (حسب الفلاتر)</div><b>{{ kpi.total }}</b><div class="tag">Total</div></div>
+    <div class="kpi"><div class="mut">محاولات منتهية</div><b>{{ kpi.finished }}</b><div class="tag">Finished</div></div>
+    <div class="kpi"><div class="mut">محاولات جارية</div><b>{{ kpi.running }}</b><div class="tag">Running</div></div>
+    <div class="kpi"><div class="mut">متوسط الدرجة</div><b>{{ kpi.avg_score }}</b><div class="tag">Avg</div></div>
   </div>
 
   <div style="height:14px"></div>
@@ -221,11 +124,11 @@
 
     <div class="export-row">
       <div class="export-hint">
-        التصدير يحترم الفلاتر الحالية (إن وجدت).  
+        التصدير يحترم الفلاتر الحالية (إن وجدت).
         <span class="meta-chip">?{{ request.GET.urlencode|default:"(بدون فلاتر)" }}</span>
       </div>
 
-      <div class="toolbar">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <a class="btn secondary" href="{% url 'quiz:staff_export_csv' %}?{{ request.GET.urlencode }}">تصدير CSV</a>
         <a class="btn secondary" href="{% url 'quiz:staff_export_xlsx' %}?{{ request.GET.urlencode }}">تصدير Excel</a>
         <a class="btn secondary" href="{% url 'quiz:staff_export_pdf' %}?{{ request.GET.urlencode }}">تصدير PDF</a>
@@ -235,8 +138,9 @@
 
   <div style="height:14px"></div>
 
-  <div class="card table-wrap">
-    <div class="table-scroll">
+  <div class="card" style="padding:0;overflow:hidden;">
+    <!-- ✅ scroll-x لتفعيل تصميم scrollbar من base -->
+    <div class="table-wrap scroll-x">
       <table>
         <thead>
           <tr class="mut">
@@ -259,17 +163,12 @@
                 <div class="name-cell">
                   <b>{{ a.participant.full_name|default:"—" }}</b>
                   <div class="mut">
-                    {% if a.started_ip %}
-                      <span class="meta-chip">IP: {{ a.started_ip }}</span>
-                    {% else %}
-                      <span class="meta-chip">IP: —</span>
-                    {% endif %}
+                    <span class="meta-chip">IP: {{ a.started_ip|default:"—" }}</span>
                   </div>
                 </div>
               </td>
 
               <td>{{ a.quiz.title }}</td>
-
               <td><b>{{ a.score }}</b></td>
 
               <td>
@@ -283,11 +182,7 @@
               <td>
                 <div style="display:flex;flex-direction:column;gap:6px;">
                   <span class="meta-chip">بدأ: {{ a.started_at|date:"Y-m-d H:i" }}</span>
-                  {% if a.finished_at %}
-                    <span class="meta-chip">انتهى: {{ a.finished_at|date:"Y-m-d H:i" }}</span>
-                  {% else %}
-                    <span class="meta-chip">انتهى: —</span>
-                  {% endif %}
+                  <span class="meta-chip">انتهى: {% if a.finished_at %}{{ a.finished_at|date:"Y-m-d H:i" }}{% else %}—{% endif %}</span>
                 </div>
               </td>
 
@@ -296,36 +191,40 @@
                   <a class="btn secondary small" href="{% url 'quiz:staff_attempt_detail' a.id %}">تفاصيل</a>
 
                   {% if not a.is_finished %}
-                    <form method="post" action="{% url 'quiz:staff_attempt_finish' a.id %}" style="margin:0;">
+                    <form method="post" action="{% url 'quiz:staff_attempt_finish' a.id %}" style="margin:0;"
+                          data-confirm="1"
+                          data-confirm-title="إنهاء المحاولة"
+                          data-confirm-message="تأكيد إنهاء المحاولة الجارية؟"
+                          data-confirm-sub="سيتم اعتبار المحاولة منتهية ولن يستطيع المتقدم المتابعة."
+                          data-confirm-ok="إنهاء"
+                          data-confirm-cancel="إلغاء"
+                          data-confirm-danger="1">
                       {% csrf_token %}
-                      <button class="btn soft small" type="submit"
-                              onclick="return confirm('تأكيد إنهاء المحاولة الجارية؟');">
-                        إنهاء
-                      </button>
+                      <button class="btn soft small" type="submit">إنهاء</button>
                     </form>
                   {% endif %}
 
                   <form method="post" action="{% url 'quiz:staff_attempt_reset' a.id %}" style="margin:0;"
-                        onsubmit="return confirm('تأكيد إعادة فتح الاختبار لهذا الموظف؟ سيتم حذف المحاولة الحالية.');">
+                        data-confirm="1"
+                        data-confirm-title="إعادة فتح الاختبار"
+                        data-confirm-message="تأكيد إعادة فتح الاختبار لهذا الموظف؟"
+                        data-confirm-sub="سيتم حذف المحاولة الحالية وإتاحة الاختبار من جديد."
+                        data-confirm-ok="إعادة فتح"
+                        data-confirm-cancel="إلغاء"
+                        data-confirm-danger="1">
                     {% csrf_token %}
                     <button class="btn danger small" type="submit">إعادة فتح</button>
                   </form>
                 </div>
               </td>
             </tr>
-
           {% empty %}
-            <tr>
-              <td colspan="7" class="mut" style="padding:14px;">
-                لا توجد نتائج حسب الفلاتر الحالية.
-              </td>
-            </tr>
+            <tr><td colspan="7" class="mut" style="padding:14px;">لا توجد نتائج حسب الفلاتر الحالية.</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
-    {# Pagination (يحافظ على الفلاتر ويضيف page بشكل صحيح بدون تكرار) #}
     <div class="pagination">
       <div class="mut">
         صفحة {{ attempts.number }} من {{ attempts.paginator.num_pages }} — إجمالي المعروض: {{ attempts.paginator.count }}
@@ -343,6 +242,5 @@
       </div>
     </div>
   </div>
-
 </div>
 {% endblock %}

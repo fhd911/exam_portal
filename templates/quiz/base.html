@@ -1,3 +1,4 @@
+{% load static %}
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
@@ -14,7 +15,6 @@
     :root{
       --ff:"Cairo",system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;
 
-      /* ✅ تصغير عام للخط */
       --fs: 13.5px;
       --fs-sm: 12.5px;
       --fs-lg: 16px;
@@ -31,7 +31,6 @@
       --ink:#0f172a;
 
       --r:18px;
-      --r2:16px;
       --shadow:0 14px 40px rgba(2,44,34,.09);
       --shadow2:0 8px 20px rgba(2,44,34,.07);
     }
@@ -91,26 +90,6 @@
       padding:16px;
     }
     .row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
-
-    .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0 0}
-    @media (max-width: 980px){ .kpis{grid-template-columns:repeat(2,minmax(0,1fr));} }
-    @media (max-width: 540px){ .kpis{grid-template-columns:1fr;} }
-
-    .kpi{
-      border-radius:18px;
-      padding:12px 12px;
-      background:
-        radial-gradient(420px 150px at 0% 0%, rgba(14,165,164,.10), transparent 55%),
-        radial-gradient(420px 150px at 100% 0%, rgba(16,185,129,.10), transparent 55%),
-        #fff;
-      border:1px solid rgba(231,238,246,.95);
-      box-shadow:var(--shadow2);
-    }
-    .kpi b{font-size:20px}
-    .kpi .tag{
-      display:inline-block;margin-top:7px;padding:4px 9px;border-radius:999px;
-      font-size:11.5px;border:1px solid var(--line);color:var(--mut);background:#fff
-    }
 
     .btn{
       display:inline-flex;align-items:center;justify-content:center;gap:8px;
@@ -194,8 +173,96 @@
     }
     .toast.success{background:linear-gradient(135deg,#0ea5a4,#10b981)}
     .toast.error{background:linear-gradient(135deg,#ef4444,#f97316)}
+    .toast.warning{background:linear-gradient(135deg,#f59e0b,#f97316)}
+    .toast.info{background:linear-gradient(135deg,#3b82f6,#06b6d4)}
 
-    /* ✅ مفيد لصفحات خاصة مثل login */
+    /* ✅ Scrollbar (Only for .scroll-x / .scroll-y containers) */
+    .scroll-x, .scroll-y{
+      scrollbar-width: thin;
+      scrollbar-color: rgba(14,165,164,.55) rgba(231,238,246,.75);
+    }
+    .scroll-x::-webkit-scrollbar,
+    .scroll-y::-webkit-scrollbar{
+      height:10px;
+      width:10px;
+    }
+    .scroll-x::-webkit-scrollbar-track,
+    .scroll-y::-webkit-scrollbar-track{
+      background: rgba(231,238,246,.75);
+      border-radius:999px;
+    }
+    .scroll-x::-webkit-scrollbar-thumb,
+    .scroll-y::-webkit-scrollbar-thumb{
+      background: linear-gradient(135deg, rgba(14,165,164,.9), rgba(16,185,129,.9));
+      border-radius:999px;
+      border:2px solid rgba(231,238,246,.75);
+    }
+    .scroll-x::-webkit-scrollbar-thumb:hover,
+    .scroll-y::-webkit-scrollbar-thumb:hover{
+      filter: brightness(.98);
+    }
+
+    /* ===========================
+       ✅ Confirm Modal
+    ============================ */
+    .m-backdrop{
+      position:fixed; inset:0;
+      background: rgba(2,6,23,.45);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:2000;
+    }
+    .m-backdrop.show{display:flex;}
+    .m-card{
+      width: min(560px, 100%);
+      border-radius:24px;
+      background:
+        radial-gradient(820px 240px at 20% 0%, rgba(16,185,129,.12), transparent 60%),
+        radial-gradient(820px 240px at 80% 0%, rgba(14,165,164,.10), transparent 60%),
+        rgba(255,255,255,.90);
+      border:1px solid rgba(231,238,246,.95);
+      box-shadow: 0 28px 80px rgba(2,44,34,.22);
+      backdrop-filter: blur(10px);
+      transform: translateY(6px) scale(.985);
+      opacity:0;
+      transition: transform .14s ease, opacity .14s ease;
+      overflow:hidden;
+    }
+    .m-backdrop.show .m-card{transform: translateY(0) scale(1); opacity:1;}
+    .m-head{
+      padding:14px 16px;
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      border-bottom:1px solid rgba(231,238,246,.95);
+      background: rgba(255,255,255,.55);
+    }
+    .m-title{display:flex;align-items:center;gap:10px;font-weight:900;color:var(--ink);}
+    .m-ico{
+      width:38px;height:38px;border-radius:14px;
+      display:flex;align-items:center;justify-content:center;
+      background: rgba(14,165,164,.10);
+      border:1px solid rgba(14,165,164,.18);
+      color:#065f46;font-weight:900;font-size:16px;
+    }
+    .m-ico.danger{background: rgba(239,68,68,.10);border-color: rgba(239,68,68,.20);color:#991b1b;}
+    .m-close{
+      width:38px;height:38px;border-radius:14px;
+      border:1px solid rgba(231,238,246,.95);
+      background:#fff;cursor:pointer;font-weight:900;color:var(--mut);
+    }
+    .m-body{padding:16px;}
+    .m-msg{color:var(--txt);line-height:1.9;font-size:13px;}
+    .m-sub{margin-top:10px;color:var(--mut);font-size:12.2px;line-height:1.8;}
+    .m-actions{
+      padding:14px 16px;
+      display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;
+      border-top:1px solid rgba(231,238,246,.95);
+      background: rgba(255,255,255,.55);
+    }
+    .btn.light{background:#fff;color:var(--ink);border:1px solid rgba(231,238,246,.95);box-shadow:none;}
+    .btn.light:hover{background:rgba(14,165,164,.04);}
+
     {% block base_css_extra %}{% endblock %}
   </style>
 
@@ -203,6 +270,7 @@
 </head>
 
 <body>
+
   <div class="topbar">
     <div class="topbar-inner">
       <div class="brand">
@@ -213,11 +281,13 @@
         </div>
       </div>
 
-      <!-- ✅ لا تظهر أي أزرار للمختبر -->
       <div class="nav">
-        {% if request.user.is_staff %}
-          <a class="btn secondary" href="{% url 'quiz:staff_manage' %}">لوحة الإدارة</a>
-        {% endif %}
+        {# ✅ زر لوحة الإدارة يظهر فقط داخل صفحات staff_ #}
+        {% with n=request.resolver_match.url_name %}
+          {% if request.user.is_staff and n and n|slice:":6" == "staff_" %}
+            <a class="btn secondary" href="{% url 'quiz:staff_manage' %}">لوحة الإدارة</a>
+          {% endif %}
+        {% endwith %}
       </div>
     </div>
   </div>
@@ -232,18 +302,126 @@
   <div class="toast-wrap" id="toasts">
     {% if messages %}
       {% for m in messages %}
-        <div class="toast {% if m.tags %}{{ m.tags }}{% endif %}">
-          {{ m }}
-        </div>
+        {% if "error" in m.tags %}
+          <div class="toast error">{{ m }}</div>
+        {% elif "success" in m.tags %}
+          <div class="toast success">{{ m }}</div>
+        {% elif "warning" in m.tags %}
+          <div class="toast warning">{{ m }}</div>
+        {% elif "info" in m.tags %}
+          <div class="toast info">{{ m }}</div>
+        {% else %}
+          <div class="toast">{{ m }}</div>
+        {% endif %}
       {% endfor %}
     {% endif %}
   </div>
 
+  <!-- ✅ Confirm Modal -->
+  <div class="m-backdrop" id="confirmBackdrop" aria-hidden="true">
+    <div class="m-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <div class="m-head">
+        <div class="m-title" id="confirmTitle">
+          <div class="m-ico" id="confirmIcon">!</div>
+          <span id="confirmTitleText">تأكيد العملية</span>
+        </div>
+        <button class="m-close" type="button" id="confirmClose" aria-label="إغلاق">✕</button>
+      </div>
+
+      <div class="m-body">
+        <div class="m-msg" id="confirmMsg">هل أنت متأكد؟</div>
+        <div class="m-sub" id="confirmSub">لن يتم تنفيذ العملية إلا بعد موافقتك.</div>
+      </div>
+
+      <div class="m-actions">
+        <button class="btn light" type="button" id="confirmCancel">إلغاء</button>
+        <button class="btn danger" type="button" id="confirmOk">موافق</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // Toast fade
     setTimeout(() => {
       document.querySelectorAll(".toast").forEach(t => t.style.opacity = "0");
       setTimeout(() => document.querySelectorAll(".toast").forEach(t => t.remove()), 350);
     }, 3200);
+
+    // Confirm Modal
+    (function(){
+      const back = document.getElementById("confirmBackdrop");
+      const btnOk = document.getElementById("confirmOk");
+      const btnCancel = document.getElementById("confirmCancel");
+      const btnClose = document.getElementById("confirmClose");
+      const titleEl = document.getElementById("confirmTitleText");
+      const msgEl = document.getElementById("confirmMsg");
+      const subEl = document.getElementById("confirmSub");
+      const iconEl = document.getElementById("confirmIcon");
+
+      let pendingAction = null;
+
+      function openConfirm(opts){
+        const o = opts || {};
+        titleEl.textContent = o.title || "تأكيد العملية";
+        msgEl.textContent = o.message || "هل أنت متأكد؟";
+        subEl.textContent = o.sub || "لن يتم تنفيذ العملية إلا بعد موافقتك.";
+
+        const danger = !!o.danger;
+        iconEl.classList.toggle("danger", danger);
+        iconEl.textContent = danger ? "!" : "✓";
+
+        btnOk.className = danger ? "btn danger" : "btn";
+        btnOk.textContent = o.okText || (danger ? "موافق" : "تأكيد");
+        btnCancel.textContent = o.cancelText || "إلغاء";
+
+        back.classList.add("show");
+        back.setAttribute("aria-hidden", "false");
+        setTimeout(() => btnOk.focus(), 10);
+      }
+
+      function closeConfirm(){
+        back.classList.remove("show");
+        back.setAttribute("aria-hidden", "true");
+        pendingAction = null;
+      }
+
+      btnOk.addEventListener("click", () => { if (pendingAction) pendingAction(); closeConfirm(); });
+      btnCancel.addEventListener("click", closeConfirm);
+      btnClose.addEventListener("click", closeConfirm);
+      back.addEventListener("click", (e) => { if (e.target === back) closeConfirm(); });
+      document.addEventListener("keydown", (e) => {
+        if (!back.classList.contains("show")) return;
+        if (e.key === "Escape") closeConfirm();
+      });
+
+      // ✅ Intercept any form with data-confirm="1"
+      document.addEventListener("submit", (e) => {
+        const form = e.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        if (!form.dataset.confirm) return;
+
+        if (form.dataset.confirmBypass === "1") {
+          form.dataset.confirmBypass = "0";
+          return;
+        }
+
+        e.preventDefault();
+
+        pendingAction = () => {
+          form.dataset.confirmBypass = "1";
+          form.submit();
+        };
+
+        openConfirm({
+          title: form.dataset.confirmTitle || "تأكيد العملية",
+          message: form.dataset.confirmMessage || "هل أنت متأكد؟",
+          sub: form.dataset.confirmSub || "لن يتم تنفيذ العملية إلا بعد موافقتك.",
+          okText: form.dataset.confirmOk || "موافق",
+          cancelText: form.dataset.confirmCancel || "إلغاء",
+          danger: form.dataset.confirmDanger === "1",
+        });
+      });
+    })();
   </script>
 </body>
 </html>

@@ -1,6 +1,10 @@
 {% extends "quiz/base.html" %}
 {% block title %}استيراد الأسئلة{% endblock %}
 
+{% block topbar_actions %}
+  <a class="btn secondary" href="{% url 'quiz:staff_manage' %}">لوحة الإدارة</a>
+{% endblock %}
+
 {% block content %}
   <div class="card" style="max-width:860px;margin:0 auto;">
     <div class="row" style="align-items:flex-start;">

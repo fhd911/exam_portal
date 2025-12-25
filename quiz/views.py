@@ -19,9 +19,6 @@ from .models import Participant, Quiz, Attempt, Question, Choice, Answer
 SESSION_ATTEMPT_ID = "quiz_attempt_id"
 
 
-# ======================================================
-# الصفحة الرئيسية
-# ======================================================
 def home(request: HttpRequest) -> HttpResponse:
     attempt_id = request.session.get(SESSION_ATTEMPT_ID)
     if attempt_id:
@@ -29,9 +26,6 @@ def home(request: HttpRequest) -> HttpResponse:
     return redirect("quiz:login")
 
 
-# ======================================================
-# Helpers
-# ======================================================
 def _get_active_quiz() -> Quiz | None:
     return Quiz.objects.filter(is_active=True).first()
 
@@ -52,7 +46,6 @@ def _get_attempt_or_redirect(request: HttpRequest) -> Attempt | None:
         request.session.pop(SESSION_ATTEMPT_ID, None)
         return None
 
-    # ✅ منع تبديل الجلسة: لازم نفس session_key التي بدأت بها المحاولة
     current_skey = request.session.session_key or ""
     if getattr(attempt, "session_key", "") and attempt.session_key != current_skey:
         request.session.pop(SESSION_ATTEMPT_ID, None)
@@ -63,19 +56,7 @@ def _get_attempt_or_redirect(request: HttpRequest) -> Attempt | None:
 
 
 def _build_attempts_queryset_for_staff(request: HttpRequest):
-    """
-    يبني QuerySet للمحاولات بحسب فلاتر GET (للوحة + التصدير)
-    GET params:
-      q: بحث (سجل/اسم)
-      status: all | finished | running
-      quiz: quiz_id
-      sort: -started_at | started_at | -score | score
-    """
-    qs = (
-        Attempt.objects
-        .select_related("participant", "quiz")
-        .order_by("-started_at")
-    )
+    qs = Attempt.objects.select_related("participant", "quiz").order_by("-started_at")
 
     qtxt = (request.GET.get("q") or "").strip()
     if qtxt:
@@ -102,9 +83,6 @@ def _build_attempts_queryset_for_staff(request: HttpRequest):
     return qs
 
 
-# ======================================================
-# دخول الموظف (السجل + آخر 4 من الجوال) + منع تعدد الجلسات
-# ======================================================
 def login_view(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         national_id = (request.POST.get("national_id") or "").strip()
@@ -123,7 +101,7 @@ def login_view(request: HttpRequest) -> HttpResponse:
             messages.error(request, "غير مخول بدخول الاختبار.")
             return redirect("quiz:login")
 
-        if (getattr(p, "phone_last4", "") or "").strip() != last4:
+        if (p.phone_last4 or "").strip() != last4:
             messages.error(request, "بيانات التحقق غير صحيحة.")
             return redirect("quiz:login")
 
@@ -136,12 +114,10 @@ def login_view(request: HttpRequest) -> HttpResponse:
             messages.error(request, "لا يوجد اختبار نشط حالياً.")
             return redirect("quiz:login")
 
-        # ✅ تأكد من وجود session_key
         if not request.session.session_key:
             request.session.create()
         skey = request.session.session_key or ""
 
-        # ✅ منع تعدد الجلسات: إذا فيه محاولة غير منتهية لنفس الموظف
         active_attempt = (
             Attempt.objects
             .filter(participant=p, quiz=quiz, is_finished=False)
@@ -150,16 +126,13 @@ def login_view(request: HttpRequest) -> HttpResponse:
         )
 
         if active_attempt:
-            # نفس الجلسة: كمّل
-            if getattr(active_attempt, "session_key", "") == skey:
+            if (active_attempt.session_key or "") == skey:
                 request.session[SESSION_ATTEMPT_ID] = active_attempt.id
                 return redirect("quiz:question")
 
-            # جلسة أخرى: امنع
             messages.error(request, "يوجد اختبار جاري لهذا السجل من جهاز/جلسة أخرى. تواصل مع الإدارة لإعادة فتحه.")
             return redirect("quiz:login")
 
-        # إنشاء محاولة جديدة
         ip = request.META.get("REMOTE_ADDR")
         ua = (request.META.get("HTTP_USER_AGENT") or "")[:255]
 
@@ -177,9 +150,6 @@ def login_view(request: HttpRequest) -> HttpResponse:
     return render(request, "quiz/login.html")
 
 
-# ======================================================
-# صفحة السؤال (30 ثانية + تحكم من السيرفر)
-# ======================================================
 @transaction.atomic
 def question_view(request: HttpRequest) -> HttpResponse:
     attempt = _get_attempt_or_redirect(request)
@@ -199,7 +169,7 @@ def question_view(request: HttpRequest) -> HttpResponse:
 
     q = questions[attempt.current_index]
 
-    ans, _created = Answer.objects.get_or_create(
+    ans, _ = Answer.objects.get_or_create(
         attempt=attempt,
         question=q,
         defaults={"started_at": timezone.now()},
@@ -249,9 +219,6 @@ def question_view(request: HttpRequest) -> HttpResponse:
     return redirect("quiz:question")
 
 
-# ======================================================
-# إنهاء الاختبار
-# ======================================================
 def finish_view(request: HttpRequest) -> HttpResponse:
     attempt = _get_attempt_or_redirect(request)
     if not attempt:
@@ -269,9 +236,6 @@ def finish_view(request: HttpRequest) -> HttpResponse:
     return render(request, "quiz/finish.html")
 
 
-# ======================================================
-# ✅ لوحة إدارة VIP (Staff only)
-# ======================================================
 @staff_member_required
 def staff_manage_view(request: HttpRequest) -> HttpResponse:
     quizzes = Quiz.objects.all().order_by("-id")
@@ -283,22 +247,14 @@ def staff_manage_view(request: HttpRequest) -> HttpResponse:
         running=Count("id", filter=Q(is_finished=False)),
         avg_score=Avg("score"),
     )
-    total = int(agg["total"] or 0)
-    finished = int(agg["finished"] or 0)
-    running = int(agg["running"] or 0)
-    avg_score = float(agg["avg_score"] or 0.0)
-
-    paginator = Paginator(qs, 50)
-    page_obj = paginator.get_page(request.GET.get("page") or 1)
-
     ctx = {
         "quizzes": quizzes,
-        "attempts": page_obj,
+        "attempts": Paginator(qs, 50).get_page(request.GET.get("page") or 1),
         "kpi": {
-            "total": total,
-            "finished": finished,
-            "running": running,
-            "avg_score": round(avg_score, 2),
+            "total": int(agg["total"] or 0),
+            "finished": int(agg["finished"] or 0),
+            "running": int(agg["running"] or 0),
+            "avg_score": round(float(agg["avg_score"] or 0.0), 2),
         },
         "filters": {
             "q": (request.GET.get("q") or "").strip(),
@@ -310,9 +266,6 @@ def staff_manage_view(request: HttpRequest) -> HttpResponse:
     return render(request, "quiz/staff_manage.html", ctx)
 
 
-# ======================================================
-# ✅ تفاصيل محاولة (Staff)
-# ======================================================
 @staff_member_required
 def staff_attempt_detail_view(request: HttpRequest, attempt_id: int) -> HttpResponse:
     attempt = get_object_or_404(
@@ -331,11 +284,7 @@ def staff_attempt_detail_view(request: HttpRequest, attempt_id: int) -> HttpResp
     rows = []
     for ans in answers_qs:
         q = ans.question
-        correct = None
-        for c in q.choices.all():
-            if c.is_correct:
-                correct = c
-                break
+        correct = next((c for c in q.choices.all() if c.is_correct), None)
 
         is_correct = bool(
             ans.selected_choice and correct and ans.selected_choice_id == correct.id and (not ans.is_late)
@@ -353,18 +302,11 @@ def staff_attempt_detail_view(request: HttpRequest, attempt_id: int) -> HttpResp
             "is_late": ans.is_late,
             "is_correct": is_correct,
             "spent": spent_seconds,
-            "answered_at": ans.answered_at,
         })
 
-    return render(request, "quiz/staff_attempt_detail.html", {
-        "attempt": attempt,
-        "rows": rows,
-    })
+    return render(request, "quiz/staff_attempt_detail.html", {"attempt": attempt, "rows": rows})
 
 
-# ======================================================
-# ✅ إجراء: إعادة فتح محاولة (Reset) (Staff POST)
-# ======================================================
 @staff_member_required
 @require_POST
 @transaction.atomic
@@ -375,7 +317,6 @@ def staff_reset_attempt_view(request: HttpRequest, attempt_id: int) -> HttpRespo
         return redirect("quiz:staff_manage")
 
     participant = attempt.participant
-
     Answer.objects.filter(attempt=attempt).delete()
     attempt.delete()
 
@@ -386,9 +327,6 @@ def staff_reset_attempt_view(request: HttpRequest, attempt_id: int) -> HttpRespo
     return redirect("quiz:staff_manage")
 
 
-# ======================================================
-# ✅ إجراء: إنهاء محاولة جارية (Force Finish) (Staff POST)
-# ======================================================
 @staff_member_required
 @require_POST
 @transaction.atomic
@@ -414,9 +352,6 @@ def staff_force_finish_attempt_view(request: HttpRequest, attempt_id: int) -> Ht
     return redirect("quiz:staff_manage")
 
 
-# ======================================================
-# ✅ التصدير: CSV (حسب الفلاتر)
-# ======================================================
 @staff_member_required
 def staff_export_results_csv(request: HttpRequest) -> HttpResponse:
     qs = _build_attempts_queryset_for_staff(request)
@@ -443,9 +378,6 @@ def staff_export_results_csv(request: HttpRequest) -> HttpResponse:
     return response
 
 
-# ======================================================
-# ✅ التصدير: Excel (.xlsx) (حسب الفلاتر)
-# ======================================================
 @staff_member_required
 def staff_export_results_xlsx(request: HttpRequest) -> HttpResponse:
     qs = _build_attempts_queryset_for_staff(request)
@@ -492,9 +424,6 @@ def staff_export_results_xlsx(request: HttpRequest) -> HttpResponse:
     return resp
 
 
-# ======================================================
-# ✅ التصدير: PDF (حسب الفلاتر)
-# ======================================================
 @staff_member_required
 def staff_export_results_pdf(request: HttpRequest) -> HttpResponse:
     qs = _build_attempts_queryset_for_staff(request)[:500]
@@ -549,9 +478,6 @@ def staff_export_results_pdf(request: HttpRequest) -> HttpResponse:
     return resp
 
 
-# ======================================================
-# ✅ استيراد الأسئلة من Excel (Staff)
-# ======================================================
 @staff_member_required
 @transaction.atomic
 def staff_import_questions_view(request: HttpRequest) -> HttpResponse:
@@ -565,37 +491,33 @@ def staff_import_questions_view(request: HttpRequest) -> HttpResponse:
 
         if not quiz_id:
             messages.error(request, "اختر اختبار (Quiz) أولاً.")
-            return redirect("quiz:staff_import_questions")
+            return redirect("quiz:staff_import")
 
         quiz = Quiz.objects.filter(id=quiz_id).first()
         if not quiz:
             messages.error(request, "الاختبار غير موجود.")
-            return redirect("quiz:staff_import_questions")
+            return redirect("quiz:staff_import")
 
-        if not file:
-            messages.error(request, "ارفع ملف Excel (.xlsx).")
-            return redirect("quiz:staff_import_questions")
-
-        if not file.name.lower().endswith(".xlsx"):
-            messages.error(request, "الملف يجب أن يكون بصيغة .xlsx")
-            return redirect("quiz:staff_import_questions")
+        if not file or not file.name.lower().endswith(".xlsx"):
+            messages.error(request, "ارفع ملف Excel بصيغة .xlsx")
+            return redirect("quiz:staff_import")
 
         try:
             import openpyxl
         except ImportError:
             messages.error(request, "مكتبة openpyxl غير مثبتة. نفّذ: pip install openpyxl")
-            return redirect("quiz:staff_import_questions")
+            return redirect("quiz:staff_import")
 
         wb = openpyxl.load_workbook(file)
         if sheet_name not in wb.sheetnames:
             messages.error(request, f"الشيت '{sheet_name}' غير موجود. المتاح: {wb.sheetnames}")
-            return redirect("quiz:staff_import_questions")
+            return redirect("quiz:staff_import")
 
         ws = wb[sheet_name]
         rows = list(ws.iter_rows(values_only=True))
         if not rows:
             messages.error(request, "الشيت فارغ.")
-            return redirect("quiz:staff_import_questions")
+            return redirect("quiz:staff_import")
 
         headers_raw = [h for h in rows[0]]
         headers = [str(h).strip().lower() if h is not None else "" for h in headers_raw]
@@ -604,7 +526,7 @@ def staff_import_questions_view(request: HttpRequest) -> HttpResponse:
         missing = [c for c in need if c not in headers]
         if missing:
             messages.error(request, f"أعمدة ناقصة: {missing} | الموجود: {headers_raw}")
-            return redirect("quiz:staff_import_questions")
+            return redirect("quiz:staff_import")
 
         idx = {h: headers.index(h) for h in need}
 
@@ -614,7 +536,7 @@ def staff_import_questions_view(request: HttpRequest) -> HttpResponse:
         created = 0
         skipped = 0
 
-        for _row_num, r in enumerate(rows[1:], start=2):
+        for r in rows[1:]:
             order_val = r[idx["order"]]
             qtext = r[idx["question"]]
             a = r[idx["a"]]
@@ -633,7 +555,6 @@ def staff_import_questions_view(request: HttpRequest) -> HttpResponse:
                 order_int = 0
 
             q = Question.objects.create(quiz=quiz, text=str(qtext).strip(), order=order_int)
-
             Choice.objects.create(question=q, text=str(a).strip(), is_correct=(correct == "A"))
             Choice.objects.create(question=q, text=str(b).strip(), is_correct=(correct == "B"))
             Choice.objects.create(question=q, text=str(c).strip(), is_correct=(correct == "C"))
@@ -647,38 +568,17 @@ def staff_import_questions_view(request: HttpRequest) -> HttpResponse:
     return render(request, "quiz/staff_import.html", {"quizzes": quizzes})
 
 
-# ======================================================
-# ✅ استيراد المتقدمين (Participants) من Excel (Staff)
-# ======================================================
 @staff_member_required
 @transaction.atomic
 def staff_import_participants_view(request: HttpRequest) -> HttpResponse:
-    """
-    استيراد بيانات المتقدمين من ملف Excel (.xlsx)
-    الشيت الافتراضي: participants
-
-    الأعمدة المطلوبة (غير حساسة لحالة الأحرف):
-      national_id, full_name, phone_last4
-
-    أعمدة اختيارية:
-      is_allowed (0/1 أو TRUE/FALSE)
-      has_taken_exam (0/1 أو TRUE/FALSE)
-
-    الخيارات:
-      replace=1  => حذف جميع المتقدمين ثم استيرادهم من جديد
-      upsert     => (الافتراضي) تحديث/إضافة حسب national_id
-    """
     if request.method == "POST":
         sheet_name = (request.POST.get("sheet_name") or "participants").strip()
         replace = request.POST.get("replace") == "1"
+        reset_taken = request.POST.get("reset_taken") == "1"
         file = request.FILES.get("file")
 
-        if not file:
+        if not file or not file.name.lower().endswith(".xlsx"):
             messages.error(request, "ارفع ملف Excel (.xlsx).")
-            return redirect("quiz:staff_import_participants")
-
-        if not file.name.lower().endswith(".xlsx"):
-            messages.error(request, "الملف يجب أن يكون بصيغة .xlsx")
             return redirect("quiz:staff_import_participants")
 
         try:
@@ -708,51 +608,55 @@ def staff_import_participants_view(request: HttpRequest) -> HttpResponse:
             return redirect("quiz:staff_import_participants")
 
         idx = {h: headers.index(h) for h in need}
+        ix_allowed = headers.index("is_allowed") if "is_allowed" in headers else None
+        ix_taken = headers.index("has_taken_exam") if "has_taken_exam" in headers else None
 
-        # optional
-        def _opt_index(col: str) -> int | None:
-            return headers.index(col) if col in headers else None
-
-        ix_allowed = _opt_index("is_allowed")
-        ix_taken = _opt_index("has_taken_exam")
+        def _cell_to_str(v) -> str:
+            if v is None:
+                return ""
+            if isinstance(v, float):
+                if v.is_integer():
+                    return str(int(v))
+                return str(v).strip()
+            return str(v).strip()
 
         def _to_bool(v, default: bool) -> bool:
             if v is None:
                 return default
-            s = str(v).strip().lower()
+            s = _cell_to_str(v).lower()
             if s in ("1", "true", "yes", "y", "نعم", "صح"):
                 return True
             if s in ("0", "false", "no", "n", "لا", "خطأ"):
                 return False
             return default
 
+        def _extract_last4(v) -> str:
+            s = _cell_to_str(v)
+            digits = "".join(ch for ch in s if ch.isdigit())
+            return digits[-4:] if digits else ""
+
         if replace:
-            Participant.objects.all().delete()
+            Participant.objects.all().update(is_allowed=False)
 
-        created = 0
-        updated = 0
-        skipped = 0
+        created = updated = skipped = 0
 
-        for _row_num, r in enumerate(rows[1:], start=2):
-            national_id = str(r[idx["national_id"]] or "").strip()
-            full_name = str(r[idx["full_name"]] or "").strip()
-            phone_last4 = str(r[idx["phone_last4"]] or "").strip()
+        for r in rows[1:]:
+            national_id = _cell_to_str(r[idx["national_id"]])
+            full_name = _cell_to_str(r[idx["full_name"]])
+            phone_last4 = _extract_last4(r[idx["phone_last4"]])
 
             if not national_id:
                 skipped += 1
                 continue
 
-            # last4: لو فاضي نخليه فاضي، لو موجود لازم 4 أرقام
-            if phone_last4:
-                phone_last4 = phone_last4.replace(" ", "")
-                if (not phone_last4.isdigit()) or len(phone_last4) != 4:
-                    skipped += 1
-                    continue
+            if phone_last4 and (not phone_last4.isdigit() or len(phone_last4) != 4):
+                skipped += 1
+                continue
 
-            is_allowed = _to_bool(r[ix_allowed] if ix_allowed is not None else None, True)
-            has_taken_exam = _to_bool(r[ix_taken] if ix_taken is not None else None, False)
+            is_allowed = True if replace else _to_bool(r[ix_allowed] if ix_allowed is not None else None, True)
+            has_taken_exam = False if reset_taken else _to_bool(r[ix_taken] if ix_taken is not None else None, False)
 
-            obj, was_created = Participant.objects.update_or_create(
+            _obj, was_created = Participant.objects.update_or_create(
                 national_id=national_id,
                 defaults={
                     "full_name": full_name,
@@ -766,10 +670,17 @@ def staff_import_participants_view(request: HttpRequest) -> HttpResponse:
             else:
                 updated += 1
 
-        messages.success(
-            request,
-            f"✅ تم استيراد المتقدمين بنجاح: (جدد {created}) (تم تحديث {updated}) (تم تجاهل {skipped})"
-        )
+        extra = []
+        if replace:
+            extra.append("استبدال بدون حذف: تم جعل الجميع غير مسموحين ثم تفعيل المستوردين")
+        if reset_taken:
+            extra.append("تم تصفير حالة (نفّذ الاختبار) للمستورَدين")
+
+        msg = f"✅ تم الاستيراد بنجاح: (جدد {created}) (تحديث {updated}) (تجاهل {skipped})"
+        if extra:
+            msg += " | " + " — ".join(extra)
+
+        messages.success(request, msg)
         return redirect("quiz:staff_manage")
 
     return render(request, "quiz/staff_import_participants.html")

@@ -1,45 +1,99 @@
 {% extends "quiz/base.html" %}
 {% block title %}سؤال {{ index }}{% endblock %}
+
 {% block content %}
-  <div class="card">
-    <div class="row">
-      <div><b>السؤال {{ index }}</b> <span class="mut">/ {{ total }}</span></div>
-      <div class="timer">الوقت المتبقي: <span id="t">{{ seconds }}</span> ث</div>
+<div class="card" style="max-width:900px;margin:0 auto;">
+  <div class="row" style="align-items:flex-start;">
+    <div>
+      <div class="mut">اختبار: <b>{{ quiz.title }}</b></div>
+      <h2 style="margin-top:6px;">{{ question.text }}</h2>
+      <div class="mut" style="margin-top:8px;">
+        سؤال <b>{{ index }}</b> من <b>{{ total }}</b>
+      </div>
     </div>
 
-    <hr style="border:0;border-top:1px solid var(--line);margin:14px 0;">
-
-    <h3 style="margin:0 0 10px 0;">{{ question.text }}</h3>
-
-    <form id="qForm" method="post">
-      {% csrf_token %}
-
-      {% for c in choices %}
-        <label class="opt">
-          <input type="radio" name="choice" value="{{ c.id }}">
-          {{ c.text }}
-        </label>
-      {% endfor %}
-
-      <div class="row" style="margin-top:12px;">
-        <div class="mut">ينتقل تلقائياً بعد انتهاء الوقت.</div>
-        <button class="btn" type="submit">التالي</button>
+    <div style="min-width:220px;text-align:left;">
+      <div class="pill ok" style="display:inline-flex;gap:8px;align-items:center;padding:8px 12px;">
+        ⏱ <span>الوقت المتبقي:</span>
+        <b id="tleft">{{ seconds }}</b>
+        <span>ث</span>
       </div>
-    </form>
+    </div>
   </div>
 
-  <script>
-    let left = {{ seconds|safe }};
-    const tEl = document.getElementById("t");
+  <div style="height:14px;"></div>
+
+  <form id="qForm" method="post" style="display:grid;gap:10px;">
+    {% csrf_token %}
+
+    {% for c in choices %}
+      <label class="opt">
+        <input type="radio" name="choice" value="{{ c.id }}">
+        <span class="box">
+          <span class="dot"></span>
+          <span class="txt">{{ c.text }}</span>
+        </span>
+      </label>
+    {% endfor %}
+
+    <button class="btn" type="submit" style="height:54px;border-radius:20px;margin-top:8px;">
+      التالي
+    </button>
+  </form>
+</div>
+
+<style>
+  .opt{display:block;cursor:pointer;}
+  .opt input{display:none;}
+  .opt .box{
+    display:flex;align-items:center;gap:12px;
+    padding:14px 14px;
+    border-radius:18px;
+    border:1px solid rgba(231,238,246,.95);
+    background: rgba(255,255,255,.9);
+    box-shadow: 0 10px 22px rgba(2,44,34,.06);
+    transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+  }
+  .opt .dot{
+    width:18px;height:18px;border-radius:50%;
+    border:2px solid rgba(14,165,164,.35);
+    display:inline-block;
+    position:relative;
+    flex:0 0 auto;
+  }
+  .opt .txt{font-weight:900;color:#0b2b22;}
+  .opt:hover .box{transform: translateY(-1px);border-color: rgba(14,165,164,.35);}
+  .opt input:checked + .box{
+    border-color: rgba(16,185,129,.55);
+    box-shadow: 0 0 0 4px rgba(16,185,129,.12), 0 10px 24px rgba(2,44,34,.07);
+  }
+  .opt input:checked + .box .dot{
+    border-color: rgba(16,185,129,.75);
+  }
+  .opt input:checked + .box .dot::after{
+    content:"";
+    position:absolute;inset:3px;
+    border-radius:50%;
+    background: rgba(16,185,129,.85);
+  }
+</style>
+
+<script>
+  (function(){
+    const el = document.getElementById("tleft");
     const form = document.getElementById("qForm");
+    let t = parseInt(el.textContent || "{{ seconds }}", 10);
 
     const timer = setInterval(() => {
-      left -= 1;
-      tEl.textContent = left;
-      if (left <= 0) {
+      t -= 1;
+      if (t <= 0){
+        el.textContent = "0";
         clearInterval(timer);
-        form.submit();
+        form.submit(); // بدون اختيار => يعتبر متأخر/فارغ حسب السيرفر
+        return;
       }
+      el.textContent = String(t);
     }, 1000);
-  </script>
+  })();
+</script>
 {% endblock %}
