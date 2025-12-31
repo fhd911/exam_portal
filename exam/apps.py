@@ -1,5 +1,8 @@
+# quiz/apps.py
 from django.apps import AppConfig
 
 
-class ExamConfig(AppConfig):
-    name = 'exam'
+class QuizConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "quiz"
+    verbose_name = "نظام الاختبارات"

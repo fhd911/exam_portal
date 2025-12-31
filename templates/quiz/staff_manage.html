@@ -66,6 +66,7 @@
 
     <div class="tabs">
       <a class="tab primary" href="{% url 'quiz:staff_manage' %}">النتائج</a>
+      {# ✅ تم تعديل الاسم الصحيح لمسار استيراد الأسئلة #}
       <a class="tab" href="{% url 'quiz:staff_import' %}">استيراد الأسئلة</a>
       <a class="tab" href="{% url 'quiz:staff_import_participants' %}">استيراد المتقدمين</a>
     </div>
@@ -131,7 +132,7 @@
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <a class="btn secondary" href="{% url 'quiz:staff_export_csv' %}?{{ request.GET.urlencode }}">تصدير CSV</a>
         <a class="btn secondary" href="{% url 'quiz:staff_export_xlsx' %}?{{ request.GET.urlencode }}">تصدير Excel</a>
-        <a class="btn secondary" href="{% url 'quiz:staff_export_pdf' %}?{{ request.GET.urlencode }}">تصدير PDF</a>
+        {# ✅ تم حذف PDF لتفادي NoReverseMatch إذا المسار غير موجود عندك #}
       </div>
     </div>
   </form>
@@ -139,7 +140,6 @@
   <div style="height:14px"></div>
 
   <div class="card" style="padding:0;overflow:hidden;">
-    <!-- ✅ scroll-x لتفعيل تصميم scrollbar من base -->
     <div class="table-wrap scroll-x">
       <table>
         <thead>

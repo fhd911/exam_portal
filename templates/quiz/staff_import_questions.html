@@ -1,0 +1,130 @@
+{% extends "quiz/base.html" %}
+{% block title %}استيراد الأسئلة{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h2>استيراد الأسئلة (3 مجالات × 50 سؤال)</h2>
+  <div class="mut" style="margin-top:6px;line-height:1.9">
+    الملف يجب أن يحتوي شيتات: <b>deputy</b>, <b>guidance</b>, <b>activity</b> وبالأعمدة:
+    <span class="meta-chip">order</span>
+    <span class="meta-chip">question</span>
+    <span class="meta-chip">A</span>
+    <span class="meta-chip">B</span>
+    <span class="meta-chip">C</span>
+    <span class="meta-chip">D</span>
+    <span class="meta-chip">correct</span> (A/B/C/D)
+  </div>
+
+  <div style="height:14px"></div>
+
+  <form method="post" enctype="multipart/form-data" class="glass" style="padding:14px;">
+    {% csrf_token %}
+    <div class="grid" style="display:grid;grid-template-columns: 1.4fr .6fr .6fr;gap:10px;align-items:end;">
+      <div>
+        <label class="lbl">ملف الأسئلة (xlsx)</label>
+        <input type="file" name="file" accept=".xlsx" required>
+      </div>
+
+      <div>
+        <label class="lbl">زمن السؤال (ثانية)</label>
+        <input type="number" name="time_per_question_seconds" value="60" min="10" max="600">
+      </div>
+
+      <div>
+        <label class="lbl">تفعيل المستورد</label>
+        <label style="display:flex;gap:8px;align-items:center">
+          <input type="checkbox" name="make_active" value="1">
+          <span class="mut">اجعل الاختبارات Active</span>
+        </label>
+      </div>
+    </div>
+
+    <div style="height:10px"></div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn secondary" type="submit" name="mode" value="preview">Preview</button>
+      <button class="btn" type="submit" name="mode" value="import"
+              data-confirm="1"
+              data-confirm-title="تأكيد الاستيراد"
+              data-confirm-message="سيتم حذف أسئلة الاختبارات الحالية واستبدالها بالمستورد."
+              data-confirm-sub="لن يتم الاستيراد إلا إذا كان كل شيت = 50 سؤال بدون أخطاء."
+              data-confirm-ok="استيراد"
+              data-confirm-cancel="إلغاء"
+              data-confirm-danger="1">استيراد</button>
+
+      <a class="btn soft" href="{% url 'quiz:staff_manage' %}">رجوع للوحة الإدارة</a>
+    </div>
+  </form>
+
+  {% if previews %}
+    <div style="height:16px"></div>
+
+    {% for p in previews %}
+      <div class="card" style="margin-top:12px;">
+        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div>
+            <b style="font-size:15px">{{ p.title }}</b>
+            <div class="mut">Sheet: {{ p.sheet }}</div>
+          </div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <span class="meta-chip">Rows: {{ p.total_rows }}</span>
+            <span class="meta-chip">Valid: {{ p.valid_rows }}</span>
+            {% if p.errors %}
+              <span class="pill warn">فيه أخطاء</span>
+            {% else %}
+              <span class="pill ok">جاهز</span>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if p.errors %}
+          <div style="height:10px"></div>
+          <div class="alert" style="border-color:rgba(239,68,68,.25);background:rgba(255,255,255,.92)">
+            <div class="ic" style="background:rgba(239,68,68,.12)">⚠️</div>
+            <div>
+              <b>أخطاء:</b>
+              <ul style="margin:6px 0 0;line-height:1.9">
+                {% for e in p.errors|slice:":15" %}
+                  <li>{{ e }}</li>
+                {% endfor %}
+              </ul>
+              {% if p.errors|length > 15 %}
+                <div class="mut">… تم إخفاء باقي الأخطاء ({{ p.errors|length }})</div>
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
+
+        <div style="height:10px"></div>
+
+        <div class="table-wrap scroll-x">
+          <table>
+            <thead>
+              <tr class="mut">
+                <th>order</th><th>question</th><th>correct</th><th>A</th><th>B</th><th>C</th><th>D</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in p.sample %}
+                <tr>
+                  <td><b>{{ r.order }}</b></td>
+                  <td>{{ r.question }}</td>
+                  <td><b>{{ r.correct }}</b></td>
+                  <td>{{ r.A }}</td>
+                  <td>{{ r.B }}</td>
+                  <td>{{ r.C }}</td>
+                  <td>{{ r.D }}</td>
+                </tr>
+              {% endfor %}
+              {% if not p.sample %}
+                <tr><td colspan="7" class="mut" style="padding:12px;">لا يوجد Preview.</td></tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

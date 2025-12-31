@@ -2,65 +2,52 @@
 {% block title %}استيراد المتقدمين{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width:860px;margin:0 auto;">
-  <div class="row" style="align-items:flex-start;">
-    <div>
-      <h2 style="margin:0;">استيراد المتقدمين (Excel)</h2>
-      <div class="mut" style="margin-top:6px;line-height:1.9;">
-        الأعمدة المطلوبة داخل شيت <b>participants</b>:
-        <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;">
-          <span class="pill ok">national_id</span>
-          <span class="pill ok">full_name</span>
-          <span class="pill ok">phone_last4</span>
-          <span class="pill warn">is_allowed (اختياري)</span>
-          <span class="pill warn">has_taken_exam (اختياري)</span>
-        </div>
-      </div>
-    </div>
-
-    <a class="btn secondary" href="{% url 'quiz:staff_manage' %}" style="white-space:nowrap;">رجوع للوحة الإدارة</a>
+<div class="card">
+  <h2>استيراد المتقدمين</h2>
+  <div class="mut" style="margin-top:6px;line-height:1.9">
+    الأعمدة المطلوبة:
+    <span class="meta-chip">national_id</span>
+    <span class="meta-chip">full_name</span>
+    <span class="meta-chip">phone_last4</span>
+    <span class="meta-chip">domain</span>
+    (deputy / guidance / activity أو عربي)
   </div>
 
-  <div style="height:14px;"></div>
+  <div style="height:14px"></div>
 
-  <form method="post" enctype="multipart/form-data" style="display:grid;gap:12px;">
+  <form method="post" enctype="multipart/form-data" class="glass" style="padding:14px;">
     {% csrf_token %}
 
-    <div class="card" style="padding:14px;background:rgba(255,255,255,.9);">
-      <div class="mut" style="font-weight:900;margin-bottom:10px;">خيارات الاستيراد</div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div>
-          <label class="mut" style="font-weight:900;margin-bottom:8px;display:block;">اسم الشيت</label>
-          <input type="text" name="sheet_name" value="participants">
-        </div>
-
-        <div>
-          <label class="mut" style="font-weight:900;margin-bottom:8px;display:block;">ملف Excel</label>
-          <input type="file" name="file" accept=".xlsx" required>
-        </div>
+    <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <label class="lbl">ملف المتقدمين (xlsx)</label>
+        <input type="file" name="file" accept=".xlsx" required>
       </div>
+      <div>
+        <label class="lbl">اسم الشيت</label>
+        <input name="sheet_name" value="participants">
+      </div>
+    </div>
 
-      <div style="height:10px;"></div>
+    <div style="height:10px"></div>
 
-      <label style="display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:16px;background:#fff;">
-        <input type="checkbox" name="replace" value="1" style="width:auto;transform:translateY(1px);">
-        <span style="font-weight:900;">
-          replace=1 (استبدال بدون حذف) — يجعل الجميع غير مسموحين ثم يفعّل المستوردين
-        </span>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;">
+      <label style="display:flex;gap:8px;align-items:center">
+        <input type="checkbox" name="replace" value="1">
+        <span class="mut">استبدال بدون حذف (تعطيل الجميع ثم تفعيل المستوردين)</span>
       </label>
 
-      <label style="display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:16px;background:#fff;margin-top:10px;">
-        <input type="checkbox" name="reset_taken" value="1" style="width:auto;transform:translateY(1px);">
-        <span style="font-weight:900;">
-          reset_taken=1 — تصفير has_taken_exam للمستورَدين فقط
-        </span>
+      <label style="display:flex;gap:8px;align-items:center">
+        <input type="checkbox" name="reset_taken" value="1">
+        <span class="mut">تصفير (أدى الاختبار)</span>
       </label>
     </div>
 
-    <div class="row">
-      <button class="btn" type="submit">استيراد الآن</button>
-      <div class="mut" style="text-align:left;">بعد الاستيراد سيتم تحويلك إلى لوحة الإدارة.</div>
+    <div style="height:12px"></div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn" type="submit">استيراد</button>
+      <a class="btn soft" href="{% url 'quiz:staff_manage' %}">رجوع</a>
     </div>
   </form>
 </div>

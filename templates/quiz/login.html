@@ -1,94 +1,154 @@
-{% extends "quiz/base.html" %}
-{% block title %}دخول الاختبار{% endblock %}
+{% load static %}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>تسجيل الدخول للاختبار</title>
 
-{% block base_css_extra %}
-  .topbar{display:none;}
-  .wrap{max-width:100%; padding:0;}
-{% endblock %}
+  <!-- Cairo -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
-{% block frame_open %}{% endblock %}
-{% block frame_close %}{% endblock %}
+  <style>
+    :root{
+      --ff:"Cairo",system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;
+      --bg1:#f6fbff; --bg2:#f7fff9;
+      --txt:#0b2b22; --mut:#6b7280;
+      --card:rgba(255,255,255,.86);
+      --br:rgba(15,23,42,.10);
+      --g1:#10b981; --g2:#06b6d4;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:var(--ff);
+      background:
+        radial-gradient(900px 500px at 10% 10%, rgba(16,185,129,.16), transparent 55%),
+        radial-gradient(900px 500px at 90% 10%, rgba(6,182,212,.16), transparent 55%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      color:var(--txt);
+      min-height:100vh;
+      display:flex; align-items:center; justify-content:center;
+      padding:18px;
+    }
+    .wrap{width:100%; max-width:520px;}
+    .card{
+      background:var(--card);
+      border:1px solid var(--br);
+      box-shadow:0 18px 44px rgba(2,44,34,.10);
+      border-radius:22px;
+      overflow:hidden;
+      backdrop-filter: blur(10px);
+    }
+    .head{
+      padding:18px 18px 10px;
+      border-bottom:1px solid rgba(15,23,42,.08);
+    }
+    .title{margin:0; font-size:18px; font-weight:900}
+    .sub{margin:6px 0 0; color:var(--mut); font-size:13px; line-height:1.8}
+    .body{padding:16px 18px 18px}
+    .field{margin-top:12px}
+    label{display:block; font-weight:800; font-size:13px; margin-bottom:6px}
+    input{
+      width:100%;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid rgba(15,23,42,.14);
+      background:rgba(255,255,255,.92);
+      font-family:var(--ff);
+      font-size:14px;
+      outline:none;
+    }
+    input:focus{
+      border-color: rgba(16,185,129,.55);
+      box-shadow: 0 0 0 4px rgba(16,185,129,.12);
+    }
+    .row{display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
+    @media (max-width:520px){ .row{grid-template-columns:1fr;} }
 
-{% block extra_head %}
-<style>
-  .login-shell{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:30px 12px;}
-  .login-card{
-    width:min(640px,100%);
-    border-radius:28px;
-    padding:26px 26px 22px;
-    background:
-      radial-gradient(900px 320px at 20% 0%, rgba(16,185,129,.12), transparent 55%),
-      radial-gradient(900px 320px at 80% 0%, rgba(14,165,164,.10), transparent 55%),
-      rgba(255,255,255,.70);
-    border:1px solid rgba(231,238,246,.85);
-    box-shadow: 0 24px 70px rgba(2,44,34,.14);
-    backdrop-filter: blur(10px);
-  }
-  .login-title{text-align:center;font-weight:900;font-size:22px;margin:0;color:#0b2b22;}
-  .login-sub{text-align:center;margin-top:8px;color:var(--mut);line-height:1.85;font-size:13px;}
-  .hint-pill{
-    margin:14px auto 18px;
-    width:max-content;max-width:100%;
-    display:flex;align-items:center;gap:8px;
-    padding:8px 12px;border-radius:999px;
-    border:1px solid rgba(16,185,129,.18);
-    background: rgba(16,185,129,.10);
-    color:#065f46;font-weight:800;font-size:12.2px;
-  }
-  .hint-pill .dot{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:rgba(16,185,129,.20);font-weight:900;}
-  .form-grid{display:grid;gap:14px;margin-top:8px;}
-  .field label{display:block;font-size:12.5px;color:var(--mut);margin-bottom:8px;font-weight:800;}
-  .field input{
-    height:48px;border-radius:18px;padding:12px 14px;
-    border:1px solid rgba(231,238,246,.95);
-    background: rgba(255,255,255,.85);
-    box-shadow: 0 10px 20px rgba(2,44,34,.06);
-  }
-  .field input:focus{border-color: rgba(16,185,129,.45);box-shadow: 0 0 0 4px rgba(16,185,129,.14), 0 10px 22px rgba(2,44,34,.06);}
-  .big-btn{
-    width:100%;height:54px;border-radius:20px;border:none;cursor:pointer;margin-top:8px;
-    font-family:var(--ff);font-weight:900;font-size:14px;color:#fff;
-    background: linear-gradient(135deg, #16a34a, #059669);
-    box-shadow: 0 18px 35px rgba(5,150,105,.22);
-  }
-  .big-btn:hover{filter:brightness(.98);transform: translateY(-1px);}
-  .helper{margin-top:8px;text-align:center;color:var(--mut);font-size:12.3px;line-height:1.8;}
-  .login-bg{
-    position:fixed;inset:0;z-index:-1;
-    background:
-      radial-gradient(1000px 420px at 25% 0%, rgba(56,189,248,.18), transparent 60%),
-      radial-gradient(1000px 420px at 80% 10%, rgba(16,185,129,.16), transparent 60%),
-      linear-gradient(180deg, #f0fbff, #f7fff9);
-  }
-</style>
-{% endblock %}
+    .btn{
+      width:100%;
+      margin-top:14px;
+      padding:12px 14px;
+      border:0;
+      border-radius:16px;
+      font-weight:900;
+      font-size:14px;
+      cursor:pointer;
+      color:#062a22;
+      background: linear-gradient(135deg, rgba(16,185,129,.92), rgba(6,182,212,.92));
+      box-shadow: 0 14px 30px rgba(16,185,129,.18);
+    }
+    .btn:active{transform: translateY(1px);}
 
-{% block content %}
-<div class="login-bg"></div>
-<div class="login-shell">
-  <div class="login-card">
-    <h1 class="login-title">دخول منصة الاختبار الإلكتروني</h1>
-    <div class="login-sub">
-      سجّل دخولك للوصول إلى اختبار الموظفين<br>بمدة <b>30 ثانية</b> لكل سؤال.
-    </div>
-
-    <div class="hint-pill"><span class="dot">i</span> بيانات الدخول: السجل المدني + آخر 4 أرقام من الجوال</div>
-
-    <form method="post" action="{% url 'quiz:login' %}">
-      {% csrf_token %}
-      <div class="form-grid">
-        <div class="field">
-          <label>رقم السجل المدني</label>
-          <input name="national_id" inputmode="numeric" autocomplete="off" placeholder="مثال: 1234567890" required>
-        </div>
-        <div class="field">
-          <label>آخر 4 أرقام من الجوال</label>
-          <input name="last4" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="مثال: 7890" required>
-        </div>
-        <button class="big-btn" type="submit">دخول المنصة</button>
-        <div class="helper">عند إدخال البيانات بشكل صحيح سيتم توجيهك مباشرة إلى صفحة الأسئلة.</div>
+    .msgs{margin:0 0 10px}
+    .msg{
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(239,68,68,.20);
+      background: rgba(239,68,68,.08);
+      color:#7f1d1d;
+      font-weight:800;
+      font-size:13px;
+      line-height:1.8;
+    }
+    .msg + .msg{margin-top:8px;}
+    .foot{
+      padding:12px 18px 16px;
+      color:var(--mut);
+      font-size:12.5px;
+      line-height:1.9;
+      border-top:1px solid rgba(15,23,42,.08);
+    }
+    .hint{font-weight:900; color:#0f172a}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="head">
+        <h1 class="title">تسجيل الدخول للاختبار</h1>
+        <p class="sub">أدخل <span class="hint">السجل المدني</span> و <span class="hint">آخر 4 أرقام من الجوال</span> للتحقق.</p>
       </div>
-    </form>
+
+      <div class="body">
+
+        {% if messages %}
+          <div class="msgs">
+            {% for message in messages %}
+              <div class="msg">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <!-- ✅ مهم جدًا: csrf_token داخل فورم POST -->
+        <form method="post" action="">
+          {% csrf_token %}
+
+          <div class="row">
+            <div class="field">
+              <label for="national_id">السجل المدني</label>
+              <input id="national_id" name="national_id" inputmode="numeric" autocomplete="off"
+                     placeholder="مثال: 10xxxxxxxx" required>
+            </div>
+
+            <div class="field">
+              <label for="last4">آخر 4 أرقام من الجوال</label>
+              <input id="last4" name="last4" inputmode="numeric" maxlength="4" autocomplete="off"
+                     placeholder="مثال: 1234" required>
+            </div>
+          </div>
+
+          <button class="btn" type="submit">دخول الاختبار</button>
+        </form>
+      </div>
+
+      <div class="foot">
+        في حال ظهور رسالة <b>يوجد اختبار جاري</b> فهذا يعني أن هناك جلسة أخرى مفتوحة لنفس السجل.
+        تواصل مع الإدارة لإعادة فتح المحاولة عند الحاجة.
+      </div>
+    </div>
   </div>
-</div>
-{% endblock %}
+</body>
+</html>
