@@ -1,154 +1,173 @@
-{% load static %}
-<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>تسجيل الدخول للاختبار</title>
+{% extends "quiz/base.html" %}
+{% block title %}تسجيل الدخول للاختبار{% endblock %}
 
-  <!-- Cairo -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+{% block frame_open %}{% endblock %}
+{% block frame_close %}{% endblock %}
 
-  <style>
-    :root{
-      --ff:"Cairo",system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;
-      --bg1:#f6fbff; --bg2:#f7fff9;
-      --txt:#0b2b22; --mut:#6b7280;
-      --card:rgba(255,255,255,.86);
-      --br:rgba(15,23,42,.10);
-      --g1:#10b981; --g2:#06b6d4;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0; font-family:var(--ff);
-      background:
-        radial-gradient(900px 500px at 10% 10%, rgba(16,185,129,.16), transparent 55%),
-        radial-gradient(900px 500px at 90% 10%, rgba(6,182,212,.16), transparent 55%),
-        linear-gradient(180deg, var(--bg1), var(--bg2));
-      color:var(--txt);
-      min-height:100vh;
-      display:flex; align-items:center; justify-content:center;
-      padding:18px;
-    }
-    .wrap{width:100%; max-width:520px;}
-    .card{
-      background:var(--card);
-      border:1px solid var(--br);
-      box-shadow:0 18px 44px rgba(2,44,34,.10);
-      border-radius:22px;
-      overflow:hidden;
-      backdrop-filter: blur(10px);
-    }
-    .head{
-      padding:18px 18px 10px;
-      border-bottom:1px solid rgba(15,23,42,.08);
-    }
-    .title{margin:0; font-size:18px; font-weight:900}
-    .sub{margin:6px 0 0; color:var(--mut); font-size:13px; line-height:1.8}
-    .body{padding:16px 18px 18px}
-    .field{margin-top:12px}
-    label{display:block; font-weight:800; font-size:13px; margin-bottom:6px}
-    input{
-      width:100%;
-      padding:12px 12px;
-      border-radius:14px;
-      border:1px solid rgba(15,23,42,.14);
-      background:rgba(255,255,255,.92);
-      font-family:var(--ff);
-      font-size:14px;
-      outline:none;
-    }
-    input:focus{
-      border-color: rgba(16,185,129,.55);
-      box-shadow: 0 0 0 4px rgba(16,185,129,.12);
-    }
-    .row{display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
-    @media (max-width:520px){ .row{grid-template-columns:1fr;} }
-
-    .btn{
-      width:100%;
-      margin-top:14px;
-      padding:12px 14px;
-      border:0;
-      border-radius:16px;
-      font-weight:900;
-      font-size:14px;
-      cursor:pointer;
-      color:#062a22;
-      background: linear-gradient(135deg, rgba(16,185,129,.92), rgba(6,182,212,.92));
-      box-shadow: 0 14px 30px rgba(16,185,129,.18);
-    }
-    .btn:active{transform: translateY(1px);}
-
-    .msgs{margin:0 0 10px}
-    .msg{
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid rgba(239,68,68,.20);
-      background: rgba(239,68,68,.08);
-      color:#7f1d1d;
-      font-weight:800;
-      font-size:13px;
-      line-height:1.8;
-    }
-    .msg + .msg{margin-top:8px;}
-    .foot{
-      padding:12px 18px 16px;
-      color:var(--mut);
-      font-size:12.5px;
-      line-height:1.9;
-      border-top:1px solid rgba(15,23,42,.08);
-    }
-    .hint{font-weight:900; color:#0f172a}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="card">
-      <div class="head">
-        <h1 class="title">تسجيل الدخول للاختبار</h1>
-        <p class="sub">أدخل <span class="hint">السجل المدني</span> و <span class="hint">آخر 4 أرقام من الجوال</span> للتحقق.</p>
-      </div>
-
-      <div class="body">
-
-        {% if messages %}
-          <div class="msgs">
-            {% for message in messages %}
-              <div class="msg">{{ message }}</div>
-            {% endfor %}
-          </div>
-        {% endif %}
-
-        <!-- ✅ مهم جدًا: csrf_token داخل فورم POST -->
-        <form method="post" action="">
-          {% csrf_token %}
-
-          <div class="row">
-            <div class="field">
-              <label for="national_id">السجل المدني</label>
-              <input id="national_id" name="national_id" inputmode="numeric" autocomplete="off"
-                     placeholder="مثال: 10xxxxxxxx" required>
-            </div>
-
-            <div class="field">
-              <label for="last4">آخر 4 أرقام من الجوال</label>
-              <input id="last4" name="last4" inputmode="numeric" maxlength="4" autocomplete="off"
-                     placeholder="مثال: 1234" required>
-            </div>
-          </div>
-
-          <button class="btn" type="submit">دخول الاختبار</button>
-        </form>
-      </div>
-
-      <div class="foot">
-        في حال ظهور رسالة <b>يوجد اختبار جاري</b> فهذا يعني أن هناك جلسة أخرى مفتوحة لنفس السجل.
-        تواصل مع الإدارة لإعادة فتح المحاولة عند الحاجة.
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-head">
+      <div class="auth-hero">
+        <div class="auth-ico">✓</div>
+        <div>
+          <h1 class="auth-title">تسجيل الدخول للاختبار</h1>
+          <p class="auth-sub">
+            أدخل <b>السجل المدني</b> و <b>آخر 4 أرقام من الجوال</b> للتحقق.
+          </p>
+        </div>
       </div>
     </div>
+
+    <div class="auth-body">
+      <form method="post" action="" class="auth-form">
+        {% csrf_token %}
+
+        <div class="grid">
+          <div class="field">
+            <label for="national_id">السجل المدني</label>
+            <input
+              id="national_id"
+              name="national_id"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="مثال: 10xxxxxxxx"
+              required
+            >
+          </div>
+
+          <div class="field">
+            <label for="last4">آخر 4 أرقام من الجوال</label>
+            <input
+              id="last4"
+              name="last4"
+              inputmode="numeric"
+              maxlength="4"
+              autocomplete="off"
+              placeholder="مثال: 1234"
+              required
+            >
+          </div>
+        </div>
+
+        <button class="btn auth-btn" type="submit">دخول</button>
+
+        <div class="tip">
+          <span class="ic">ℹ️</span>
+          <span>
+            إذا ظهرت رسالة <b>يوجد اختبار جارٍ</b> فهذا يعني أن هناك جلسة أخرى مفتوحة لنفس السجل.
+            تواصل مع الإدارة لإعادة فتح المحاولة عند الحاجة.
+          </span>
+        </div>
+      </form>
+    </div>
   </div>
-</body>
-</html>
+</div>
+{% endblock %}
+
+{% block base_css_extra %}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 40px;}
+  .auth-wrap{
+    min-height: calc(100vh - 64px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 18px 16px 40px;
+  }
+  .auth-card{
+    width: min(560px, 100%);
+    border-radius: 26px;
+    border:1px solid rgba(231,238,246,.95);
+    box-shadow: 0 22px 60px rgba(2,44,34,.10);
+    background:
+      radial-gradient(900px 240px at 15% 0%, rgba(16,185,129,.14), transparent 60%),
+      radial-gradient(900px 240px at 85% 0%, rgba(14,165,164,.12), transparent 60%),
+      rgba(255,255,255,.82);
+    backdrop-filter: blur(10px);
+    overflow:hidden;
+  }
+
+  .auth-head{
+    padding: 16px 16px 10px;
+    border-bottom:1px solid rgba(231,238,246,.95);
+    background: rgba(255,255,255,.55);
+  }
+  .auth-hero{display:flex;gap:12px;align-items:flex-start}
+  .auth-ico{
+    width:46px;height:46px;border-radius:18px;
+    display:flex;align-items:center;justify-content:center;
+    background: linear-gradient(135deg, rgba(14,165,164,.95), rgba(16,185,129,.95));
+    box-shadow: 0 16px 30px rgba(16,185,129,.18);
+    color:#fff;font-weight:1000;font-size:18px;
+    flex:0 0 auto;
+  }
+  .auth-title{margin:0;font-size:18px;font-weight:1000;color:var(--ink)}
+  .auth-sub{margin:6px 0 0;color:var(--mut);font-weight:800;line-height:1.9;font-size:13px}
+
+  .auth-body{padding: 14px 16px 16px}
+  .auth-form{margin:0}
+  .grid{display:grid;grid-template-columns: 1fr 1fr; gap:10px}
+  @media (max-width: 560px){ .grid{grid-template-columns:1fr;} }
+
+  .field label{
+    display:block;
+    font-weight:1000;
+    font-size:12.8px;
+    margin-bottom:6px;
+    color:var(--ink);
+  }
+
+  .auth-btn{
+    width:100%;
+    margin-top:12px;
+    padding:12px 14px;
+    border-radius:18px;
+    font-size:14px;
+    font-weight:1000;
+  }
+
+  .tip{
+    margin-top:12px;
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    padding:10px 12px;
+    border-radius:18px;
+    background: rgba(2,132,199,.06);
+    border:1px solid rgba(2,132,199,.14);
+    color: #0f172a;
+    font-weight:850;
+    line-height:1.9;
+    font-size:12.6px;
+  }
+  .tip .ic{
+    width:28px;height:28px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    background:#fff;border:1px solid rgba(2,132,199,.18);
+    flex:0 0 auto;
+  }
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  const nat = document.getElementById("national_id");
+  const last4 = document.getElementById("last4");
+  if (!nat || !last4) return;
+
+  function digitsOnly(el, maxLen){
+    el.addEventListener("input", () => {
+      let v = (el.value || "").replace(/\D+/g, "");
+      if (maxLen) v = v.slice(0, maxLen);
+      el.value = v;
+    });
+  }
+
+  digitsOnly(nat, 0);
+  digitsOnly(last4, 4);
+
+  // تركيز لطيف
+  setTimeout(() => nat.focus(), 80);
+})();
+</script>
+{% endblock %}

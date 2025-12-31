@@ -1,130 +1,280 @@
 {% extends "quiz/base.html" %}
+{% load dict_extras %}
+
 {% block title %}استيراد الأسئلة{% endblock %}
 
+{% block extra_head %}
+<style>
+  .wrap{max-width:1100px;margin:0 auto;}
+  .head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .sub{margin-top:6px;line-height:1.8}
+  .glass{
+    background:rgba(255,255,255,.78);
+    border:1px solid rgba(231,238,246,.95);
+    border-radius:22px;
+    box-shadow: var(--shadow2);
+  }
+  .card2{padding:14px;}
+  .grid{display:grid;grid-template-columns: 1.2fr .8fr;gap:12px;align-items:start;}
+  @media (max-width: 980px){.grid{grid-template-columns:1fr;}}
+  .lbl{display:block;margin-bottom:6px;font-weight:900;color:var(--mut);font-size:12.2px;}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:10px;
+    padding:10px 12px;border-radius:14px;
+    border:1px solid rgba(231,238,246,.95);
+    background:rgba(255,255,255,.92);
+    font-weight:900;cursor:pointer;
+    box-shadow: 0 10px 22px rgba(2,44,34,.05);
+    text-decoration:none;color:inherit;
+  }
+  .btn.primary{
+    background: linear-gradient(135deg, rgba(34,197,94,.16), rgba(14,165,164,.12));
+    border-color: rgba(34,197,94,.22);
+  }
+  .btn.danger{
+    background: linear-gradient(135deg, rgba(239,68,68,.12), rgba(244,63,94,.10));
+    border-color: rgba(239,68,68,.22);
+  }
+  .mut{color:var(--mut);font-size:12.8px}
+  .pill2{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:7px 10px;border-radius:999px;
+    border:1px solid rgba(231,238,246,.95);
+    background: rgba(255,255,255,.86);
+    font-weight:900;font-size:12px;
+    white-space:nowrap;
+  }
+  .pill2.ok{
+    background: rgba(34,197,94,.10);
+    border-color: rgba(34,197,94,.25);
+  }
+  .pill2.bad{
+    background: rgba(239,68,68,.10);
+    border-color: rgba(239,68,68,.25);
+  }
+  .divider{height:1px;background:rgba(231,238,246,.95);margin:12px 0;}
+  .table-wrap{width:100%;overflow:auto;border-radius:16px;border:1px solid rgba(231,238,246,.95);background:rgba(255,255,255,.92);}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:10px 10px;border-bottom:1px solid rgba(231,238,246,.95);vertical-align:top;}
+  th{background:rgba(2,44,34,.04);font-weight:900;white-space:nowrap;}
+  tr:last-child td{border-bottom:none;}
+  .err{margin-top:10px;border-radius:16px;border:1px dashed rgba(239,68,68,.35);background: rgba(239,68,68,.06);padding:10px}
+  .okbox{margin-top:10px;border-radius:16px;border:1px dashed rgba(34,197,94,.35);background: rgba(34,197,94,.06);padding:10px}
+  .ul{margin:8px 0 0 0;padding:0 18px;line-height:1.9}
+  .hint{font-size:12.3px;color:var(--mut);line-height:1.9}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="card">
-  <h2>استيراد الأسئلة (3 مجالات × 50 سؤال)</h2>
-  <div class="mut" style="margin-top:6px;line-height:1.9">
-    الملف يجب أن يحتوي شيتات: <b>deputy</b>, <b>guidance</b>, <b>activity</b> وبالأعمدة:
-    <span class="meta-chip">order</span>
-    <span class="meta-chip">question</span>
-    <span class="meta-chip">A</span>
-    <span class="meta-chip">B</span>
-    <span class="meta-chip">C</span>
-    <span class="meta-chip">D</span>
-    <span class="meta-chip">correct</span> (A/B/C/D)
+<div class="wrap">
+
+  <div class="head">
+    <div>
+      <h2 style="margin:0;font-weight:1000">استيراد الأسئلة من Excel</h2>
+      <div class="sub mut">
+        ارفع ملف Excel (عدة شيتات) لمعاينة البيانات قبل الاستيراد النهائي.
+      </div>
+    </div>
+
+    <div class="row">
+      <a class="btn" href="{% url 'quiz:staff_manage' %}">↩️ رجوع</a>
+    </div>
   </div>
 
-  <div style="height:14px"></div>
-
-  <form method="post" enctype="multipart/form-data" class="glass" style="padding:14px;">
-    {% csrf_token %}
-    <div class="grid" style="display:grid;grid-template-columns: 1.4fr .6fr .6fr;gap:10px;align-items:end;">
-      <div>
-        <label class="lbl">ملف الأسئلة (xlsx)</label>
-        <input type="file" name="file" accept=".xlsx" required>
-      </div>
-
-      <div>
-        <label class="lbl">زمن السؤال (ثانية)</label>
-        <input type="number" name="time_per_question_seconds" value="60" min="10" max="600">
-      </div>
-
-      <div>
-        <label class="lbl">تفعيل المستورد</label>
-        <label style="display:flex;gap:8px;align-items:center">
-          <input type="checkbox" name="make_active" value="1">
-          <span class="mut">اجعل الاختبارات Active</span>
-        </label>
-      </div>
+  {% if messages %}
+    <div class="glass card2" style="margin-bottom:12px">
+      {% for message in messages %}
+        <div class="pill2 {% if message.tags == 'error' %}bad{% else %}ok{% endif %}">
+          {{ message }}
+        </div>
+      {% endfor %}
     </div>
+  {% endif %}
 
-    <div style="height:10px"></div>
+  <div class="grid">
 
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <button class="btn secondary" type="submit" name="mode" value="preview">Preview</button>
-      <button class="btn" type="submit" name="mode" value="import"
-              data-confirm="1"
-              data-confirm-title="تأكيد الاستيراد"
-              data-confirm-message="سيتم حذف أسئلة الاختبارات الحالية واستبدالها بالمستورد."
-              data-confirm-sub="لن يتم الاستيراد إلا إذا كان كل شيت = 50 سؤال بدون أخطاء."
-              data-confirm-ok="استيراد"
-              data-confirm-cancel="إلغاء"
-              data-confirm-danger="1">استيراد</button>
+    <!-- رفع الملف -->
+    <div class="glass card2">
+      <form method="post" enctype="multipart/form-data" class="row" style="align-items:flex-end;justify-content:space-between">
+        {% csrf_token %}
 
-      <a class="btn soft" href="{% url 'quiz:staff_manage' %}">رجوع للوحة الإدارة</a>
-    </div>
-  </form>
-
-  {% if previews %}
-    <div style="height:16px"></div>
-
-    {% for p in previews %}
-      <div class="card" style="margin-top:12px;">
-        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-          <div>
-            <b style="font-size:15px">{{ p.title }}</b>
-            <div class="mut">Sheet: {{ p.sheet }}</div>
-          </div>
-
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <span class="meta-chip">Rows: {{ p.total_rows }}</span>
-            <span class="meta-chip">Valid: {{ p.valid_rows }}</span>
-            {% if p.errors %}
-              <span class="pill warn">فيه أخطاء</span>
-            {% else %}
-              <span class="pill ok">جاهز</span>
-            {% endif %}
+        <div style="flex:1;min-width:260px">
+          <label class="lbl">ملف Excel</label>
+          <input type="file" name="file" accept=".xlsx,.xls" class="btn" style="width:100%;justify-content:flex-start" required>
+          <div class="hint" style="margin-top:6px">
+            * ارفع ملف يحتوي شيتات الأسئلة. ثم اضغط "معاينة" للتأكد من السلامة.
           </div>
         </div>
 
-        {% if p.errors %}
-          <div style="height:10px"></div>
-          <div class="alert" style="border-color:rgba(239,68,68,.25);background:rgba(255,255,255,.92)">
-            <div class="ic" style="background:rgba(239,68,68,.12)">⚠️</div>
-            <div>
-              <b>أخطاء:</b>
-              <ul style="margin:6px 0 0;line-height:1.9">
-                {% for e in p.errors|slice:":15" %}
-                  <li>{{ e }}</li>
-                {% endfor %}
-              </ul>
-              {% if p.errors|length > 15 %}
-                <div class="mut">… تم إخفاء باقي الأخطاء ({{ p.errors|length }})</div>
-              {% endif %}
-            </div>
-          </div>
+        <div class="row" style="justify-content:flex-end">
+          <button type="submit" name="action" value="preview" class="btn primary">👀 معاينة</button>
+          <button type="submit" name="action" value="import" class="btn">⬇️ استيراد</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ملخص -->
+    <div class="glass card2">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <div style="font-weight:1000">ملخص المعاينة</div>
+          <div class="mut" style="margin-top:6px">حالة كل شيت</div>
+        </div>
+
+        {% if reports %}
+          {% if all_ok %}
+            <span class="pill2 ok">✅ جاهز للاستيراد</span>
+          {% else %}
+            <span class="pill2 bad">⛔ يوجد أخطاء</span>
+          {% endif %}
+        {% else %}
+          <span class="pill2">—</span>
         {% endif %}
+      </div>
 
-        <div style="height:10px"></div>
+      {% if reports %}
+        <div class="divider"></div>
+        <div class="mut">راجع تفاصيل كل شيت في الأسفل</div>
+      {% endif %}
+    </div>
 
-        <div class="table-wrap scroll-x">
+  </div>
+
+  {% if preview %}
+    {% for sheet, rows in preview.items %}
+      <div class="glass card2" style="margin-top:12px">
+
+        <div class="row" style="justify-content:space-between">
+          <div class="row">
+
+            {# ======= حساب ok بطريقة مضمونة بدون or ولا أقواس ======= #}
+            {% with rep=reports|get_item:sheet %}
+              {% with ok1=rep.ok %}
+                {% with ok2=rep|get_item:"ok" %}
+
+                  {% if rep %}
+                    {% if ok1 %}
+                      <span class="pill2 ok">✅ شيت: <b>{{ sheet }}</b></span>
+                    {% else %}
+                      {% if ok2 %}
+                        <span class="pill2 ok">✅ شيت: <b>{{ sheet }}</b></span>
+                      {% else %}
+                        <span class="pill2 bad">⛔ شيت: <b>{{ sheet }}</b></span>
+                      {% endif %}
+                    {% endif %}
+                  {% else %}
+                    <span class="pill2 bad">⛔ شيت: <b>{{ sheet }}</b></span>
+                  {% endif %}
+
+                {% endwith %}
+              {% endwith %}
+            {% endwith %}
+
+            <span class="pill2">عدد: <b>{{ counts|get_item:sheet|default:0 }}</b></span>
+          </div>
+
+          <div class="row">
+            {% with rep=reports|get_item:sheet %}
+              {% with ok1=rep.ok %}
+                {% with ok2=rep|get_item:"ok" %}
+                  {% if rep %}
+                    {% if ok1 %}
+                      <span class="pill2 ok">سليم</span>
+                    {% else %}
+                      {% if ok2 %}
+                        <span class="pill2 ok">سليم</span>
+                      {% else %}
+                        <span class="pill2 bad">غير سليم</span>
+                      {% endif %}
+                    {% endif %}
+                  {% else %}
+                    <span class="pill2 bad">غير سليم</span>
+                  {% endif %}
+                {% endwith %}
+              {% endwith %}
+            {% endwith %}
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="table-wrap">
           <table>
             <thead>
-              <tr class="mut">
-                <th>order</th><th>question</th><th>correct</th><th>A</th><th>B</th><th>C</th><th>D</th>
+              <tr>
+                <th>#</th>
+                <th>السؤال</th>
+                <th>الصحيح</th>
+                <th>ملاحظة</th>
               </tr>
             </thead>
             <tbody>
-              {% for r in p.sample %}
+              {% for r in rows %}
                 <tr>
-                  <td><b>{{ r.order }}</b></td>
-                  <td>{{ r.question }}</td>
-                  <td><b>{{ r.correct }}</b></td>
-                  <td>{{ r.A }}</td>
-                  <td>{{ r.B }}</td>
-                  <td>{{ r.C }}</td>
-                  <td>{{ r.D }}</td>
+                  <td>{{ forloop.counter }}</td>
+                  <td>{{ r.question|default:"—" }}</td>
+                  <td>{{ r.correct|default:"—" }}</td>
+                  <td class="mut">{{ r.note|default:"" }}</td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="4" class="mut">لا يوجد صفوف للعرض.</td>
                 </tr>
               {% endfor %}
-              {% if not p.sample %}
-                <tr><td colspan="7" class="mut" style="padding:12px;">لا يوجد Preview.</td></tr>
-              {% endif %}
             </tbody>
           </table>
         </div>
+
+        {# ======= صندوق أخطاء/نجاح للشيت ======= #}
+        {% with rep=reports|get_item:sheet %}
+          {% with ok1=rep.ok %}
+            {% with ok2=rep|get_item:"ok" %}
+              {% if rep %}
+                {% if ok1 %}
+                  <div class="okbox">
+                    <div style="font-weight:1000;color:#14532d">✅ الشيت سليم</div>
+                    <div class="mut" style="margin-top:6px">يمكن استيراده بدون مشاكل.</div>
+                  </div>
+                {% else %}
+                  {% if ok2 %}
+                    <div class="okbox">
+                      <div style="font-weight:1000;color:#14532d">✅ الشيت سليم</div>
+                      <div class="mut" style="margin-top:6px">يمكن استيراده بدون مشاكل.</div>
+                    </div>
+                  {% else %}
+                    <div class="err">
+                      <div style="font-weight:1000;color:#7f1d1d">أخطاء هذا الشيت:</div>
+                      <ul class="ul">
+                        {% for e in rep.errors %}
+                          <li>{{ e }}</li>
+                        {% empty %}
+                          {% for e in rep|get_item:"errors" %}
+                            <li>{{ e }}</li>
+                          {% empty %}
+                            <li>لم يتم تمرير تفاصيل الأخطاء.</li>
+                          {% endfor %}
+                        {% endfor %}
+                      </ul>
+                    </div>
+                  {% endif %}
+                {% endif %}
+              {% else %}
+                <div class="err">
+                  <div style="font-weight:1000;color:#7f1d1d">لا توجد بيانات تقرير لهذا الشيت.</div>
+                </div>
+              {% endif %}
+            {% endwith %}
+          {% endwith %}
+        {% endwith %}
+
       </div>
     {% endfor %}
+  {% else %}
+    <div class="glass card2" style="margin-top:12px">
+      <div class="mut">ارفع ملف Excel ثم اضغط "معاينة".</div>
+    </div>
   {% endif %}
+
 </div>
 {% endblock %}

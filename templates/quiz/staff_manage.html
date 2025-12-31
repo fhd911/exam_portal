@@ -48,11 +48,7 @@
   .btn.soft{background:#fff;color:var(--ink);border:1px solid rgba(231,238,246,.95);box-shadow:none;}
   .btn.soft:hover{background:rgba(14,165,164,.04);}
 
-  /* ✅ حاوية الجدول: شريط تمرير أجمل + مسافة تحته */
-  .table-wrap{
-    overflow:auto;
-    padding-bottom:8px; /* يخلي scrollbar ما يلصق بالقاع */
-  }
+  .table-wrap{overflow:auto;padding-bottom:8px;}
 </style>
 {% endblock %}
 
@@ -66,8 +62,7 @@
 
     <div class="tabs">
       <a class="tab primary" href="{% url 'quiz:staff_manage' %}">النتائج</a>
-      {# ✅ تم تعديل الاسم الصحيح لمسار استيراد الأسئلة #}
-      <a class="tab" href="{% url 'quiz:staff_import' %}">استيراد الأسئلة</a>
+      <a class="tab" href="{% url 'quiz:staff_import_questions' %}">استيراد الأسئلة</a>
       <a class="tab" href="{% url 'quiz:staff_import_participants' %}">استيراد المتقدمين</a>
     </div>
   </div>
@@ -132,7 +127,6 @@
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <a class="btn secondary" href="{% url 'quiz:staff_export_csv' %}?{{ request.GET.urlencode }}">تصدير CSV</a>
         <a class="btn secondary" href="{% url 'quiz:staff_export_xlsx' %}?{{ request.GET.urlencode }}">تصدير Excel</a>
-        {# ✅ تم حذف PDF لتفادي NoReverseMatch إذا المسار غير موجود عندك #}
       </div>
     </div>
   </form>

@@ -2,98 +2,174 @@
 {% block title %}سؤال {{ index }}{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width:900px;margin:0 auto;">
-  <div class="row" style="align-items:flex-start;">
-    <div>
-      <div class="mut">اختبار: <b>{{ quiz.title }}</b></div>
-      <h2 style="margin-top:6px;">{{ question.text }}</h2>
-      <div class="mut" style="margin-top:8px;">
-        سؤال <b>{{ index }}</b> من <b>{{ total }}</b>
+<div class="q-wrap">
+  <div class="q-top">
+    <div class="q-left">
+      <h2 class="q-title">{{ attempt.quiz.title }}</h2>
+      <div class="q-meta">
+        <span class="q-pill">السؤال <b>{{ index }}</b> من <b>{{ total }}</b></span>
+        <span class="q-pill q-pill2">المتبقي: <b id="tRemain">{{ remaining_seconds }}</b> ث</span>
       </div>
     </div>
-
-    <div style="min-width:220px;text-align:left;">
-      <div class="pill ok" style="display:inline-flex;gap:8px;align-items:center;padding:8px 12px;">
-        ⏱ <span>الوقت المتبقي:</span>
-        <b id="tleft">{{ seconds }}</b>
-        <span>ث</span>
-      </div>
+    <div class="q-right">
+      <a class="btn secondary" href="{% url 'quiz:logout' %}">خروج</a>
     </div>
   </div>
 
-  <div style="height:14px;"></div>
+  <div class="card q-card">
+    <div class="q-head">
+      <div class="q-no">س{{ index }}</div>
+      <div class="q-text">{{ q.text }}</div>
+    </div>
 
-  <form id="qForm" method="post" style="display:grid;gap:10px;">
-    {% csrf_token %}
+    <form method="post" id="qForm" class="q-form">
+      {% csrf_token %}
 
-    {% for c in choices %}
-      <label class="opt">
-        <input type="radio" name="choice" value="{{ c.id }}">
-        <span class="box">
-          <span class="dot"></span>
-          <span class="txt">{{ c.text }}</span>
-        </span>
-      </label>
-    {% endfor %}
+      <div class="q-choices">
+        {% for c in choices %}
+          <label class="q-ch">
+            <input type="radio" name="choice_id" value="{{ c.id }}">
+            <span class="q-dot"></span>
+            <span class="q-ch-txt">{{ c.text }}</span>
+          </label>
+        {% endfor %}
+      </div>
 
-    <button class="btn" type="submit" style="height:54px;border-radius:20px;margin-top:8px;">
-      التالي
-    </button>
-  </form>
+      <div class="q-actions">
+        <button class="btn" type="submit" id="btnNext">التالي</button>
+        <button class="btn secondary" type="button" id="btnSkip">تخطي</button>
+      </div>
+
+      <div class="q-hint">
+        ⏱️ لكل سؤال <b>{{ question_seconds }}</b> ثانية — عند انتهاء الوقت سيتم الانتقال تلقائياً.
+      </div>
+    </form>
+  </div>
 </div>
+{% endblock %}
 
-<style>
-  .opt{display:block;cursor:pointer;}
-  .opt input{display:none;}
-  .opt .box{
-    display:flex;align-items:center;gap:12px;
-    padding:14px 14px;
-    border-radius:18px;
+{% block base_css_extra %}
+  .q-wrap{max-width:980px;margin:0 auto}
+  .q-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin:6px 0 12px}
+  .q-title{margin:0;font-size:18px;font-weight:1000}
+  .q-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .q-pill{
+    display:inline-flex;gap:8px;align-items:center;
+    padding:8px 10px;border-radius:999px;
+    background:rgba(14,165,164,.08);
+    border:1px solid rgba(14,165,164,.16);
+    font-weight:1000;
+  }
+  .q-pill2{background:rgba(239,68,68,.07);border-color:rgba(239,68,68,.18)}
+  #tRemain{display:inline-block;transition:transform .18s ease}
+
+  .q-card{padding:14px}
+  .q-head{
+    display:flex;gap:12px;align-items:flex-start;
+    padding-bottom:12px;border-bottom:1px dashed rgba(120,140,160,.25)
+  }
+  .q-no{
+    flex:0 0 auto;width:44px;height:44px;border-radius:18px;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,var(--brand),var(--brand2));
+    color:#fff;font-weight:1000;
+    box-shadow:0 14px 26px rgba(16,185,129,.16);
+  }
+  .q-text{font-weight:1000;line-height:2;font-size:15px;color:var(--ink)}
+
+  .q-form{margin-top:12px}
+  .q-choices{display:grid;gap:10px}
+  .q-ch{
+    display:flex;align-items:center;gap:10px;
+    padding:12px;border-radius:18px;
     border:1px solid rgba(231,238,246,.95);
-    background: rgba(255,255,255,.9);
-    box-shadow: 0 10px 22px rgba(2,44,34,.06);
-    transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+    background:rgba(255,255,255,.92);
+    cursor:pointer;
+    transition: transform .08s ease, box-shadow .18s ease;
   }
-  .opt .dot{
-    width:18px;height:18px;border-radius:50%;
+  .q-ch:hover{transform:translateY(-1px);box-shadow:0 10px 20px rgba(2,44,34,.06)}
+  .q-ch input{display:none}
+
+  .q-dot{
+    width:18px;height:18px;border-radius:999px;
     border:2px solid rgba(14,165,164,.35);
-    display:inline-block;
-    position:relative;
-    flex:0 0 auto;
+    display:inline-block;position:relative;flex:0 0 auto;
   }
-  .opt .txt{font-weight:900;color:#0b2b22;}
-  .opt:hover .box{transform: translateY(-1px);border-color: rgba(14,165,164,.35);}
-  .opt input:checked + .box{
-    border-color: rgba(16,185,129,.55);
-    box-shadow: 0 0 0 4px rgba(16,185,129,.12), 0 10px 24px rgba(2,44,34,.07);
+  .q-ch input:checked + .q-dot{border-color:var(--brand2)}
+  .q-ch input:checked + .q-dot::after{
+    content:"";position:absolute;inset:3px;border-radius:999px;background:var(--brand2);
   }
-  .opt input:checked + .box .dot{
-    border-color: rgba(16,185,129,.75);
-  }
-  .opt input:checked + .box .dot::after{
-    content:"";
-    position:absolute;inset:3px;
-    border-radius:50%;
-    background: rgba(16,185,129,.85);
-  }
-</style>
+  .q-ch-txt{font-weight:1000;line-height:1.9;color:var(--ink)}
 
+  .q-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .q-hint{margin-top:10px;color:var(--mut);font-weight:900;line-height:1.8;font-size:12.5px}
+{% endblock %}
+
+{% block extra_js %}
 <script>
-  (function(){
-    const el = document.getElementById("tleft");
-    const form = document.getElementById("qForm");
-    let t = parseInt(el.textContent || "{{ seconds }}", 10);
+(function(){
+  const totalPerQ = Number("{{ question_seconds|default:50 }}");
+  let remain = Number("{{ remaining_seconds|default:50 }}");
 
-    const timer = setInterval(() => {
-      t -= 1;
-      if (t <= 0){
-        el.textContent = "0";
-        clearInterval(timer);
-        form.submit(); // بدون اختيار => يعتبر متأخر/فارغ حسب السيرفر
-        return;
-      }
-      el.textContent = String(t);
-    }, 1000);
-  })();
+  const tRemain = document.getElementById("tRemain");
+  const form = document.getElementById("qForm");
+  const btnSkip = document.getElementById("btnSkip");
+  const btnNext = document.getElementById("btnNext");
+
+  let submitted = false;
+
+  function render(){
+    const v = Math.max(0, remain);
+    if (tRemain) tRemain.textContent = String(v);
+
+    // لمسة تحذير بسيطة آخر 10 ثواني
+    if (v <= 10 && tRemain){
+      tRemain.style.transform = "scale(1.08)";
+    } else if (tRemain){
+      tRemain.style.transform = "scale(1)";
+    }
+  }
+
+  function clearChoices(){
+    document.querySelectorAll('input[name="choice_id"]').forEach(i => i.checked = false);
+  }
+
+  function safeSubmit(){
+    if (submitted) return;
+    submitted = true;
+    if (btnNext) btnNext.disabled = true;
+    form.submit();
+  }
+
+  // تخطي: ارسال بدون اختيار
+  if (btnSkip){
+    btnSkip.addEventListener("click", function(){
+      clearChoices();
+      safeSubmit();
+    });
+  }
+
+  // عداد
+  render();
+  const timer = setInterval(function(){
+    if (submitted){ clearInterval(timer); return; }
+    remain -= 1;
+    render();
+    if (remain <= 0){
+      clearInterval(timer);
+      clearChoices();
+      safeSubmit();
+    }
+  }, 1000);
+
+  // منع دبل إرسال
+  if (form){
+    form.addEventListener("submit", function(){
+      if (submitted) return false;
+      submitted = true;
+      if (btnNext) btnNext.disabled = true;
+    });
+  }
+})();
 </script>
 {% endblock %}

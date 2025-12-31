@@ -1,16 +1,24 @@
 # config/settings.py
-from pathlib import Path
+from __future__ import annotations
+
 import os
+from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# =========================
 # .env (اختياري)
+# =========================
 try:
     from dotenv import load_dotenv
+
     load_dotenv(BASE_DIR / ".env")
 except Exception:
     pass
 
+# =========================
+# Security
+# =========================
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-change-me-in-prod")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
@@ -28,7 +36,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # ✅ مهم: AppConfig لتعريب اسم التطبيق بدل QUIZ في لوحة الإدارة
+    # ✅ تعريب اسم التطبيق داخل لوحة الإدارة
     "quiz.apps.QuizConfig",
 ]
 
@@ -38,13 +46,16 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+
+    # ✅ مهم للتعريب والـ RTL في بعض أجزاء لوحة الإدارة
+    "django.middleware.locale.LocaleMiddleware",
+
     "django.middleware.common.CommonMiddleware",
 
-    # ✅ حارس جلسة الاختبار (منع فتح الاختبار من جلسة/جهاز مختلف)
-    # (يعمل فقط على مسارات confirm/question حسب كودك في middleware.py)
+    # ✅ حارس جلسة الاختبار (بحسب middleware.py لديك)
     "quiz.middleware.ExamSessionGuard",
 
-    "django.middleware.csrf.CsrfViewMiddleware",  # ✅ مهم
+    "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -58,7 +69,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],  # ✅ مهم
+        "DIRS": [BASE_DIR / "templates"],  # ✅ مهم لملفات admin/base_site.html وغيرها
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -73,10 +84,13 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # =========================
-# DB
+# Database
 # =========================
 DATABASES = {
-    "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
 }
 
 # =========================
@@ -97,10 +111,16 @@ TIME_ZONE = "Asia/Riyadh"
 USE_I18N = True
 USE_TZ = True
 
+# (اختياري) مكان ملفات الترجمة المخصصة لو احتجتها لاحقاً
+LOCALE_PATHS = [BASE_DIR / "locale"]
+
 # =========================
 # Static
 # =========================
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# لو عندك مجلد static في الجذر (اختياري)
+# STATICFILES_DIRS = [BASE_DIR / "static"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

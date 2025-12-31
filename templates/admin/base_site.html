@@ -1,0 +1,108 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{# =========================
+   Branding (عنوان لوحة الإدارة)
+   ========================= #}
+{% block title %}لوحة الإدارة | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+  <h1 id="site-name" style="margin:0;">
+    <a href="{% url 'admin:index' %}" style="display:inline-flex;align-items:center;gap:10px;">
+      <span style="font-weight:900;">لوحة إدارة نظام الاختبارات</span>
+    </a>
+  </h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+{# =========================
+   Extra Head (RTL + Cairo + تحسينات)
+   ========================= #}
+{% block extrahead %}
+  {{ block.super }}
+
+  <!-- Cairo -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --ff:"Cairo",system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;
+    }
+
+    html, body{
+      font-family: var(--ff) !important;
+    }
+
+    /* RTL */
+    body{
+      direction: rtl;
+      text-align: right;
+    }
+
+    /* إصلاحات RTL لعناصر Django admin */
+    #container, #content, #content-main, #content-related{
+      text-align: right;
+    }
+
+    /* عكس الـ breadcrumbs */
+    .breadcrumbs{
+      direction: rtl;
+      text-align: right;
+    }
+    .breadcrumbs a{ font-weight:900; }
+
+    /* تحسين الهيدر */
+    #header{
+      background: linear-gradient(135deg, #0ea5e9, #22c55e);
+      color:#fff;
+      border-bottom: 0;
+    }
+    #header a:link, #header a:visited{
+      color:#fff !important;
+      font-weight:900;
+    }
+
+    /* تحسين البحث العلوي */
+    #toolbar{
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 26px rgba(2,44,34,.08);
+    }
+
+    /* تحسين البطاقات/الموديولات */
+    .module,
+    .app-quiz,
+    .dashboard #content-main .module{
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 26px rgba(2,44,34,.08);
+    }
+
+    /* تحسين الجداول */
+    #changelist table{
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    #changelist table thead th,
+    #changelist table tbody td{
+      text-align: right;
+    }
+
+    /* تحسين الأزرار */
+    a.button,
+    input[type=submit],
+    .submit-row input{
+      border-radius: 12px !important;
+      font-weight: 900 !important;
+    }
+
+    /* تحسين رسائل النظام */
+    ul.messagelist li{
+      border-radius: 14px;
+      font-weight: 900;
+    }
+  </style>
+{% endblock %}

@@ -1,54 +1,130 @@
+{# ==========================================================
+   templates/quiz/staff_import_participants.html (استبدله بالكامل)
+   ========================================================== #}
 {% extends "quiz/base.html" %}
 {% block title %}استيراد المتقدمين{% endblock %}
 
+{% block extra_head %}
+<style>
+  .head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .sub{margin-top:6px;line-height:1.9}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;}
+  .tab{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:9px 12px;border-radius:999px;
+    border:1px solid rgba(231,238,246,.95);
+    background:rgba(255,255,255,.92);
+    color:var(--ink);text-decoration:none;font-weight:900;font-size:12px;
+    box-shadow: 0 8px 18px rgba(2,44,34,.06);
+  }
+  .tab.primary{background: linear-gradient(135deg, rgba(14,165,164,.95), rgba(16,185,129,.95));color:#fff;border-color: rgba(14,165,164,.25);}
+  .glass{background:rgba(255,255,255,.78);border:1px solid rgba(231,238,246,.95);border-radius:22px;box-shadow: var(--shadow2);}
+  .wrap{padding:14px;}
+  .lbl{display:block;margin-bottom:6px;font-weight:900;color:var(--mut);font-size:12.2px;}
+  .hint{color:var(--mut);font-size:12.3px;line-height:1.9}
+  .note{
+    padding:10px 12px;border-radius:16px;
+    border:1px solid rgba(231,238,246,.95);
+    background:rgba(255,255,255,.92);
+    box-shadow: 0 10px 22px rgba(2,44,34,.05);
+    font-weight:900;font-size:12.5px;line-height:1.9;
+  }
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+  .btn.soft{background:#fff;color:var(--ink);border:1px solid rgba(231,238,246,.95);box-shadow:none;}
+  .btn.soft:hover{background:rgba(14,165,164,.04);}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;}
+  @media (max-width: 980px){ .grid{grid-template-columns:1fr;} }
+  .pill{
+    display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border-radius:999px;
+    font-size:11.5px;font-weight:900;border:1px solid rgba(231,238,246,.95);background:#fff;color:var(--mut)
+  }
+  .check{display:flex;gap:8px;align-items:flex-start;font-weight:900;line-height:1.9;margin-top:8px;}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="card">
-  <h2>استيراد المتقدمين</h2>
-  <div class="mut" style="margin-top:6px;line-height:1.9">
-    الأعمدة المطلوبة:
-    <span class="meta-chip">national_id</span>
-    <span class="meta-chip">full_name</span>
-    <span class="meta-chip">phone_last4</span>
-    <span class="meta-chip">domain</span>
-    (deputy / guidance / activity أو عربي)
+  <div class="head">
+    <div>
+      <h2 style="margin:0">استيراد المتقدمين</h2>
+      <div class="mut sub">
+        يستورد بيانات المرشح إلى جدول <b>Participant</b>:
+        (رقم الهوية + الاسم + آخر 4 أرقام + المجال domain)
+      </div>
+    </div>
+
+    <div class="tabs">
+      <a class="tab" href="{% url 'quiz:staff_manage' %}">لوحة الإدارة</a>
+      <a class="tab" href="{% url 'quiz:staff_import_questions' %}">استيراد الأسئلة</a>
+      <a class="tab primary" href="{% url 'quiz:staff_import_participants' %}">استيراد المتقدمين</a>
+    </div>
   </div>
 
-  <div style="height:14px"></div>
-
-  <form method="post" enctype="multipart/form-data" class="glass" style="padding:14px;">
-    {% csrf_token %}
-
-    <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+  <div class="glass wrap">
+    <div class="grid">
       <div>
-        <label class="lbl">ملف المتقدمين (xlsx)</label>
-        <input type="file" name="file" accept=".xlsx" required>
+        <div class="note">
+          ✅ الأعمدة المطلوبة في Excel (لازم نفس الأسماء):
+          <div class="mut" style="margin-top:6px">
+            <b>national_id</b>, <b>full_name</b>, <b>phone_last4</b>, <b>domain</b><br>
+            domain يقبل عربي/إنجليزي وسيتم تحويله داخليًا إلى:
+            <b>deputy</b> / <b>counselor</b> / <b>activity</b>
+          </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" style="margin-top:12px" class="glass">
+          {% csrf_token %}
+          <div style="padding:12px">
+            <label class="lbl">ملف المتقدمين (Excel .xlsx)</label>
+            <input type="file" name="file" accept=".xlsx" required>
+
+            <div style="height:10px"></div>
+
+            <label class="lbl">اسم الشيت داخل الملف</label>
+            <input name="sheet_name" value="participants" placeholder="participants">
+
+            <label class="check">
+              <input type="checkbox" name="replace" value="1">
+              <span>Replace: يجعل الجميع <b>غير مسموحين</b> ثم يفعّل فقط الموجودين في الملف.</span>
+            </label>
+
+            <label class="check">
+              <input type="checkbox" name="reset_taken" value="1">
+              <span>تصفير <b>has_taken_exam</b> للمستورَدين (إعادة فتح الاختبار لهم).</span>
+            </label>
+
+            <div class="actions">
+              <button class="btn" type="submit">استيراد</button>
+              <a class="btn soft" href="{% url 'quiz:staff_manage' %}">رجوع</a>
+            </div>
+
+            <div class="hint" style="margin-top:10px">
+              يقبل domain مثل: (وكيل/موجه طلابي/رائد نشاط) أو (deputy/counselor/activity) أو (guidance → counselor).
+            </div>
+          </div>
+        </form>
       </div>
+
       <div>
-        <label class="lbl">اسم الشيت</label>
-        <input name="sheet_name" value="participants">
+        <div class="note">
+          🔒 قواعد التحقق
+          <div class="mut" style="margin-top:6px;line-height:1.9">
+            • phone_last4 إذا موجود لازم 4 أرقام<br>
+            • domain لازم يتحول لأحد الثلاثة<br>
+            • أي صف غير مطابق يُحسب ضمن skipped
+          </div>
+        </div>
+
+        <div class="glass" style="padding:12px;margin-top:12px">
+          <div class="pill">أمثلة domain</div>
+          <div class="mut" style="margin-top:6px;line-height:1.9">
+            وكيل / deputy<br>
+            موجه طلابي / guidance / counselor<br>
+            رائد نشاط / activity
+          </div>
+        </div>
       </div>
     </div>
-
-    <div style="height:10px"></div>
-
-    <div style="display:flex;gap:14px;flex-wrap:wrap;">
-      <label style="display:flex;gap:8px;align-items:center">
-        <input type="checkbox" name="replace" value="1">
-        <span class="mut">استبدال بدون حذف (تعطيل الجميع ثم تفعيل المستوردين)</span>
-      </label>
-
-      <label style="display:flex;gap:8px;align-items:center">
-        <input type="checkbox" name="reset_taken" value="1">
-        <span class="mut">تصفير (أدى الاختبار)</span>
-      </label>
-    </div>
-
-    <div style="height:12px"></div>
-
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <button class="btn" type="submit">استيراد</button>
-      <a class="btn soft" href="{% url 'quiz:staff_manage' %}">رجوع</a>
-    </div>
-  </form>
+  </div>
 </div>
 {% endblock %}

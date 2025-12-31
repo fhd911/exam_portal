@@ -1,0 +1,124 @@
+{% extends "quiz/base.html" %}
+{% block title %}تأكيد البيانات{% endblock %}
+
+{% block content %}
+<div class="c-wrap">
+  <div class="c-head">
+    <div>
+      <h2 class="c-title">تأكيد البيانات والإقرار</h2>
+      <p class="c-sub">راجع بياناتك ثم وافق على الإقرار للانتقال للاختبار.</p>
+    </div>
+
+    <div class="c-badge">
+      <span class="c-badge-k">المجال</span>
+      <span class="c-badge-v">{{ quiz.title }}</span>
+    </div>
+  </div>
+
+  <div class="c-grid">
+    <div class="card">
+      <div class="c-sec">
+        <div class="c-sec-title">بيانات المرشح</div>
+        <div class="c-kv">
+          <div class="c-row">
+            <div class="c-k">الاسم</div>
+            <div class="c-v">{{ p.full_name|default:"-" }}</div>
+          </div>
+          <div class="c-row">
+            <div class="c-k">السجل المدني</div>
+            <div class="c-v">{{ p.national_id }}</div>
+          </div>
+          <div class="c-row">
+            <div class="c-k">آخر 4 أرقام (الجوال)</div>
+            <div class="c-v">{{ p.phone_last4|default:"-" }}</div>
+          </div>
+          <div class="c-row">
+            <div class="c-k">الاختبار</div>
+            <div class="c-v">{{ quiz.title }}</div>
+          </div>
+        </div>
+
+        <div class="c-note">
+          <span class="c-ic">⏱️</span>
+          <div class="c-note-tx">
+            لكل سؤال <b>50 ثانية</b>. عند انتهاء الوقت سيتم الانتقال تلقائياً للسؤال التالي.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="c-sec">
+        <div class="c-sec-title">الإقرار</div>
+
+        <ul class="c-bul">
+          <li>أقر بأن البيانات أعلاه صحيحة.</li>
+          <li>أتعهد بعدم الاستعانة بأي وسائل خارجية أثناء الاختبار.</li>
+          <li>أعلم أن النظام يمنع إعادة الاختبار بعد البدء/الإنهاء.</li>
+          <li>أوافق على الانتقال للاختبار الآن.</li>
+        </ul>
+
+        <form method="post" class="c-actions">
+          {% csrf_token %}
+          <input type="hidden" name="agree" value="1">
+          <button class="btn" type="submit">أوافق وأبدأ الاختبار</button>
+          <a class="btn secondary" href="{% url 'quiz:logout' %}">خروج</a>
+        </form>
+
+        <div class="c-muted">
+          إذا كانت بياناتك غير صحيحة، تواصل مع الإدارة قبل بدء الاختبار.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block base_css_extra %}
+  .c-wrap{max-width:1050px;margin:0 auto}
+  .c-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;margin:6px 0 14px}
+  .c-title{margin:0;font-size:18px;font-weight:1000}
+  .c-sub{margin:6px 0 0;color:var(--mut);font-weight:800;line-height:1.9;font-size:13px}
+
+  .c-badge{
+    display:flex;gap:8px;align-items:center;
+    padding:10px 12px;border-radius:999px;
+    background:rgba(14,165,164,.08);
+    border:1px solid rgba(14,165,164,.16);
+    font-weight:1000;
+  }
+  .c-badge-k{color:var(--mut);font-size:12px}
+  .c-badge-v{color:var(--ink)}
+
+  .c-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:12px}
+  @media (max-width:900px){.c-grid{grid-template-columns:1fr}}
+
+  .c-sec-title{font-weight:1000;margin-bottom:12px;color:var(--ink)}
+  .c-kv{display:flex;flex-direction:column;gap:0}
+  .c-row{
+    display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    padding:10px 0;border-bottom:1px dashed rgba(120,140,160,.25)
+  }
+  .c-row:last-child{border-bottom:0}
+  .c-k{color:var(--mut);font-weight:1000;font-size:12px}
+  .c-v{font-weight:1000}
+
+  .c-note{
+    margin-top:12px;
+    display:flex;gap:10px;align-items:flex-start;
+    padding:10px 12px;border-radius:18px;
+    background:rgba(2,132,199,.06);
+    border:1px solid rgba(2,132,199,.14);
+  }
+  .c-ic{
+    width:28px;height:28px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    background:#fff;border:1px solid rgba(2,132,199,.18);
+    flex:0 0 auto;
+  }
+  .c-note-tx{font-weight:900;line-height:1.9;color:var(--ink)}
+
+  .c-bul{margin:0;padding:0 18px;line-height:2;font-weight:900;color:var(--ink)}
+  .c-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .c-muted{margin-top:10px;color:var(--mut);font-weight:800;line-height:1.8;font-size:12.5px}
+{% endblock %}
