@@ -11,37 +11,94 @@
 
     <div class="c-badge">
       <span class="c-badge-k">المجال</span>
-      <span class="c-badge-v">{{ quiz.title }}</span>
+      <span class="c-badge-v">{{ domain_label|default:"-" }}</span>
     </div>
   </div>
+
+  {% if messages %}
+    <div class="msgs">
+      {% for m in messages %}
+        <div class="alert {% if m.tags %}{{ m.tags }}{% endif %}">
+          <span class="ic">
+            {% if "success" in m.tags %}✅{% elif "warning" in m.tags %}⚠️{% elif "error" in m.tags %}⛔{% else %}ℹ️{% endif %}
+          </span>
+          <div class="tx">{{ m }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if not window %}
+    <div class="alert warn">
+      <span class="ic">⏳</span>
+      <div class="tx">
+        لا توجد نافذة اختبار نشطة الآن.
+        {% if next_windows %}
+          <div class="mini">
+            أقرب النوافذ القادمة:
+            <ul class="mini-ul">
+              {% for w in next_windows %}
+                <li>
+                  <b>{{ w.domain_label|default:w.domain }}</b>
+                  — من {{ w.starts_at|date:"Y-m-d" }} {{ w.starts_at|time:"H:i" }}
+                  إلى {{ w.ends_at|time:"H:i" }}
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
 
   <div class="c-grid">
     <div class="card">
       <div class="c-sec">
         <div class="c-sec-title">بيانات المرشح</div>
+
         <div class="c-kv">
           <div class="c-row">
             <div class="c-k">الاسم</div>
             <div class="c-v">{{ p.full_name|default:"-" }}</div>
           </div>
+
           <div class="c-row">
             <div class="c-k">السجل المدني</div>
-            <div class="c-v">{{ p.national_id }}</div>
+            <div class="c-v">{{ p.national_id|default:"-" }}</div>
           </div>
+
           <div class="c-row">
             <div class="c-k">آخر 4 أرقام (الجوال)</div>
             <div class="c-v">{{ p.phone_last4|default:"-" }}</div>
           </div>
+
           <div class="c-row">
             <div class="c-k">الاختبار</div>
-            <div class="c-v">{{ quiz.title }}</div>
+            <div class="c-v">{% if quiz %}{{ quiz.title }}{% else %}—{% endif %}</div>
+          </div>
+
+          <div class="c-row">
+            <div class="c-k">النافذة الحالية</div>
+            <div class="c-v">
+              {% if window %}
+                من {{ window.starts_at|date:"Y-m-d" }} {{ window.starts_at|time:"H:i" }}
+                إلى {{ window.ends_at|time:"H:i" }}
+              {% else %}
+                —
+              {% endif %}
+            </div>
           </div>
         </div>
 
         <div class="c-note">
           <span class="c-ic">⏱️</span>
           <div class="c-note-tx">
-            لكل سؤال <b>50 ثانية</b>. عند انتهاء الوقت سيتم الانتقال تلقائياً للسؤال التالي.
+            {% if quiz and quiz.per_question_seconds %}
+              لكل سؤال <b>{{ quiz.per_question_seconds }} ثانية</b>.
+            {% else %}
+              لكل سؤال <b>50 ثانية</b>.
+            {% endif %}
+            عند انتهاء الوقت سيتم الانتقال تلقائياً للسؤال التالي.
           </div>
         </div>
       </div>
@@ -61,7 +118,13 @@
         <form method="post" class="c-actions">
           {% csrf_token %}
           <input type="hidden" name="agree" value="1">
-          <button class="btn" type="submit">أوافق وأبدأ الاختبار</button>
+
+          {% if quiz and window %}
+            <button class="btn" type="submit">أوافق وأبدأ الاختبار</button>
+          {% else %}
+            <button class="btn disabled" type="button" disabled>لا يمكن بدء الاختبار الآن</button>
+          {% endif %}
+
           <a class="btn secondary" href="{% url 'quiz:logout' %}">خروج</a>
         </form>
 
@@ -89,6 +152,32 @@
   }
   .c-badge-k{color:var(--mut);font-size:12px}
   .c-badge-v{color:var(--ink)}
+
+  .msgs{display:flex;flex-direction:column;gap:10px;margin:10px 0}
+
+  .alert{
+    display:flex;gap:10px;align-items:flex-start;
+    padding:10px 12px;border-radius:16px;
+    border:1px solid rgba(231,238,246,.95);
+    background: rgba(255,255,255,.86);
+    box-shadow: 0 10px 22px rgba(2,44,34,.05);
+    font-weight:900;font-size:13px;line-height:1.9;
+  }
+  .alert .ic{
+    width:30px;height:30px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    flex:0 0 auto;border:1px solid rgba(2,6,23,.08);background:#fff;
+  }
+  .alert.success{border-color:rgba(34,197,94,.25);background:rgba(240,253,244,.9)}
+  .alert.info{border-color:rgba(59,130,246,.22);background:rgba(239,246,255,.9)}
+  .alert.warning,
+  .alert.warn{border-color:rgba(245,158,11,.25);background:rgba(255,251,235,.9)}
+  .alert.error,
+  .alert.danger{border-color:rgba(239,68,68,.25);background:rgba(254,242,242,.9)}
+
+  .alert .tx{color:var(--ink)}
+  .alert .mini{margin-top:8px;color:var(--mut);font-weight:800}
+  .mini-ul{margin:6px 0 0;padding:0 18px;line-height:2}
 
   .c-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:12px}
   @media (max-width:900px){.c-grid{grid-template-columns:1fr}}
@@ -121,4 +210,6 @@
   .c-bul{margin:0;padding:0 18px;line-height:2;font-weight:900;color:var(--ink)}
   .c-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
   .c-muted{margin-top:10px;color:var(--mut);font-weight:800;line-height:1.8;font-size:12.5px}
+
+  .btn.disabled{opacity:.55;cursor:not-allowed;filter:saturate(.7)}
 {% endblock %}

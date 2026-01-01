@@ -10,17 +10,27 @@
     <div class="auth-head">
       <div class="auth-hero">
         <div class="auth-ico">✓</div>
-        <div>
+        <div class="auth-hero-text">
           <h1 class="auth-title">تسجيل الدخول للاختبار</h1>
           <p class="auth-sub">
             أدخل <b>السجل المدني</b> و <b>آخر 4 أرقام من الجوال</b> للتحقق.
           </p>
         </div>
+
+        {# ✅ أزرار صغيرة (بدون كلمة موظف) #}
+        <div class="auth-actions">
+          {% if request.user.is_authenticated and request.user.is_staff %}
+            <a class="btn-mini danger" href="{% url 'quiz:staff_logout' %}">خروج الإدارة</a>
+          {% endif %}
+          <a class="btn-mini ghost" href="{% url 'quiz:home' %}">الرئيسية</a>
+          {# اختياري: تفريغ جلسة المتقدم لو تبغاه #}
+          <a class="btn-mini" href="{% url 'quiz:logout' %}">إعادة ضبط</a>
+        </div>
       </div>
     </div>
 
     <div class="auth-body">
-      <form method="post" action="" class="auth-form">
+      <form method="post" action="" class="auth-form" novalidate>
         {% csrf_token %}
 
         <div class="grid">
@@ -92,7 +102,50 @@
     border-bottom:1px solid rgba(231,238,246,.95);
     background: rgba(255,255,255,.55);
   }
-  .auth-hero{display:flex;gap:12px;align-items:flex-start}
+
+  .auth-hero{
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+  }
+
+  .auth-hero-text{flex:1; min-width: 0;}
+
+  .auth-actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    align-items:center;
+    margin-inline-start: auto;
+  }
+
+  .btn-mini{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:7px 10px;
+    border-radius:999px;
+    font-weight:1000;
+    font-size:12px;
+    border:1px solid rgba(231,238,246,.95);
+    background: rgba(255,255,255,.78);
+    color: #0f172a;
+    text-decoration:none;
+    box-shadow: 0 10px 20px rgba(2,44,34,.06);
+  }
+  .btn-mini:hover{transform: translateY(-1px);}
+
+  .btn-mini.ghost{
+    background: rgba(2,132,199,.06);
+    border-color: rgba(2,132,199,.14);
+  }
+  .btn-mini.danger{
+    background: rgba(239,68,68,.08);
+    border-color: rgba(239,68,68,.18);
+    color: #991b1b;
+  }
+
   .auth-ico{
     width:46px;height:46px;border-radius:18px;
     display:flex;align-items:center;justify-content:center;
@@ -107,7 +160,11 @@
   .auth-body{padding: 14px 16px 16px}
   .auth-form{margin:0}
   .grid{display:grid;grid-template-columns: 1fr 1fr; gap:10px}
-  @media (max-width: 560px){ .grid{grid-template-columns:1fr;} }
+  @media (max-width: 640px){
+    .grid{grid-template-columns:1fr;}
+    .auth-actions{justify-content:flex-start; margin-top:10px;}
+    .auth-hero{flex-wrap:wrap;}
+  }
 
   .field label{
     display:block;
@@ -166,7 +223,6 @@
   digitsOnly(nat, 0);
   digitsOnly(last4, 4);
 
-  // تركيز لطيف
   setTimeout(() => nat.focus(), 80);
 })();
 </script>

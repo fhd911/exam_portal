@@ -1,0 +1,40 @@
+/* ===== Fix Admin Scroll (RTL friendly) ===== */
+
+html, body {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow: auto !important;
+}
+
+/* Django admin wrappers */
+#container,
+#content,
+#content-main {
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+
+/* لو عندك هيدر ثابت أو سلايدبار ثابت */
+#content {
+  overflow-y: auto !important;
+}
+
+/* بعض الثيمات تحبس التمرير داخل .main أو .wrapper */
+.main, .wrapper, .content, .page, .page-content {
+  overflow: visible !important;
+}
+
+/* لو جدول النتائج داخل صندوق ثابت */
+#changelist,
+#changelist-form,
+#result_list {
+  overflow: visible !important;
+}
+
+/* في حال الثيم حاط height ثابت لقسم المحتوى */
+.app-quiz .module,
+.module, .results, .change-list {
+  height: auto !important;
+  max-height: none !important;
+}

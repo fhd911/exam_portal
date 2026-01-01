@@ -1,9 +1,48 @@
 {% extends "quiz/base.html" %}
-{% block title %}تم الإنهاء{% endblock %}
+{% block title %}إنهاء الاختبار{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width:860px;margin:0 auto;text-align:center;padding:26px;">
-  <div style="font-size:22px;font-weight:900;">✅ تم إنهاء الاختبار</div>
-  <div class="mut" style="margin-top:8px;">نشكرك، تم تسجيل نتيجتك بنجاح.</div>
+<div class="f-wrap">
+  <div class="f-head">
+    <div>
+      <h2 class="f-title">تم إنهاء الاختبار</h2>
+      <p class="f-sub muted">شكرًا لك. يمكنك الآن الخروج.</p>
+    </div>
+    <span class="pill ok"><span class="dot"></span>تم</span>
+  </div>
+
+  <div class="card">
+    {% if attempt %}
+      <div class="f-grid">
+        <div class="f-row"><div class="k">الاسم</div><div class="v">{{ attempt.participant.full_name }}</div></div>
+        <div class="f-row"><div class="k">المجال</div><div class="v">{{ attempt.quiz.title }}</div></div>
+        <div class="f-row"><div class="k">الدرجة</div><div class="v">{{ attempt.score|default:"0" }}</div></div>
+        <div class="f-row"><div class="k">الحالة</div><div class="v">{% if attempt.is_finished %}منتهٍ{% else %}—{% endif %}</div></div>
+      </div>
+    {% else %}
+      <div class="muted" style="font-weight:1000;line-height:2">
+        لا توجد محاولة مرتبطة بهذه الجلسة.
+      </div>
+    {% endif %}
+
+    <div class="f-actions">
+      <a class="btn" href="{% url 'quiz:logout' %}">خروج</a>
+    </div>
+  </div>
 </div>
+{% endblock %}
+
+{% block base_css_extra %}
+  .f-wrap{max-width:780px;margin:0 auto}
+  .f-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;margin:6px 0 14px}
+  .f-title{margin:0;font-size:18px;font-weight:1000}
+  .f-sub{margin:6px 0 0;font-weight:900}
+
+  .f-grid{display:flex;flex-direction:column;gap:0}
+  .f-row{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 0;border-bottom:1px dashed rgba(120,140,160,.25)}
+  .f-row:last-child{border-bottom:0}
+  .k{color:var(--mut);font-weight:1000;font-size:12px}
+  .v{font-weight:1000}
+
+  .f-actions{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
 {% endblock %}

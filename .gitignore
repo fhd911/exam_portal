@@ -20,3 +20,11 @@ staticfiles/
 .vscode/
 .idea/
 .DS_Store
+
+# Excel temp files (مهم جداً)
+~$*.xlsx
+~$*.xls
+
+# Optional: block other office temp files
+~$*.docx
+~$*.pptx

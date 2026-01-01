@@ -1,240 +1,563 @@
+{# templates/quiz/staff_manage.html #}
 {% extends "quiz/base.html" %}
-{% block title %}لوحة الإدارة{% endblock %}
+{% load static %}
 
-{% block extra_head %}
-<style>
-  .admin-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
-  .admin-title .sub{margin-top:6px;}
-  .tabs{display:flex;gap:8px;flex-wrap:wrap;}
-  .tab{
-    display:inline-flex;align-items:center;gap:8px;
-    padding:9px 12px;border-radius:999px;
-    border:1px solid rgba(231,238,246,.95);
-    background:rgba(255,255,255,.92);
-    color:var(--ink);text-decoration:none;font-weight:900;font-size:12px;
-    box-shadow: 0 8px 18px rgba(2,44,34,.06);
+{% block title %}لوحة الإدارة — المحاولات{% endblock %}
+
+{% block base_css_extra %}
+  /* =========================================
+     BI / Scientific Admin Dashboard (RTL)
+     - أنحف + أصغر + احترافي
+     - بدون تمرير أفقي
+     IMPORTANT: لا تضع <style> داخل هذا البلوك
+     ========================================= */
+
+  :root{
+    --bi-bg0:#f7fbff;
+    --bi-bg1:#f3f8ff;
+    --bi-card: rgba(255,255,255,.88);
+    --bi-bdr: rgba(226,232,240,.92);
+
+    --bi-txt:#0f172a;
+    --bi-mut:#64748b;
+
+    --bi-pri:#2563eb;
+    --bi-ok:#16a34a;
+    --bi-warn:#d97706;
+    --bi-bad:#dc2626;
+
+    --bi-shadow: 0 14px 44px rgba(2,6,23,.07);
+    --bi-shadow2: 0 10px 22px rgba(2,6,23,.05);
+    --bi-ring: 0 0 0 4px rgba(37,99,235,.11);
+
+    --bi-r:18px;
   }
-  .tab.primary{background: linear-gradient(135deg, rgba(14,165,164,.95), rgba(16,185,129,.95));color:#fff;border-color: rgba(14,165,164,.25);}
-  .glass{background:rgba(255,255,255,.78);border:1px solid rgba(231,238,246,.95);border-radius:22px;box-shadow: var(--shadow2);}
-  .filters{padding:12px;}
-  .filters-grid{display:grid;grid-template-columns: 1.6fr .8fr .9fr .9fr auto auto;gap:10px;align-items:end;}
-  @media (max-width: 980px){.filters-grid{grid-template-columns:1fr 1fr;}}
-  @media (max-width: 520px){.filters-grid{grid-template-columns:1fr;}}
-  .lbl{display:block;margin-bottom:6px;font-weight:900;color:var(--mut);font-size:12.2px;}
-  .export-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:10px 0 0;}
-  .export-hint{color:var(--mut);font-size:12.2px;line-height:1.8;}
-  .meta-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:11.3px;font-weight:900;border:1px solid rgba(231,238,246,.95);background:#fff;color:var(--mut);white-space:nowrap;}
 
-  .pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-top:1px solid rgba(231,238,246,.95);background: rgba(255,255,255,.92);}
-
-  .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0 0}
-  @media (max-width: 980px){ .kpis{grid-template-columns:repeat(2,minmax(0,1fr));} }
-  @media (max-width: 540px){ .kpis{grid-template-columns:1fr;} }
-  .kpi{
-    border-radius:18px;padding:12px 12px;
+  /* لا نلمس .wrap في base.html — نخلي التخطيط داخل الصفحة */
+  .bi-wrap{max-width:1380px;margin:0 auto;padding:0 8px;}
+  .bi-shell{
     background:
-      radial-gradient(420px 150px at 0% 0%, rgba(14,165,164,.10), transparent 55%),
-      radial-gradient(420px 150px at 100% 0%, rgba(16,185,129,.10), transparent 55%),
-      #fff;
-    border:1px solid rgba(231,238,246,.95);
-    box-shadow:var(--shadow2);
+      radial-gradient(900px 320px at 80% -40px, rgba(37,99,235,.09), transparent 55%),
+      radial-gradient(700px 260px at 10% -40px, rgba(22,163,74,.07), transparent 55%),
+      linear-gradient(180deg, var(--bi-bg0), var(--bi-bg1));
+    border-radius: 26px;
+    padding: 14px;
+    box-shadow: var(--bi-shadow);
+    border: 1px solid rgba(226,232,240,.88);
   }
-  .kpi b{font-size:20px}
-  .kpi .tag{display:inline-block;margin-top:7px;padding:4px 9px;border-radius:999px;font-size:11.5px;border:1px solid var(--line);color:var(--mut);background:#fff}
 
-  .name-cell{display:flex;flex-direction:column;gap:3px;}
-  .name-cell b{font-size:13px;}
-  .actions{display:flex;gap:8px;flex-wrap:wrap;}
-  .btn.soft{background:#fff;color:var(--ink);border:1px solid rgba(231,238,246,.95);box-shadow:none;}
-  .btn.soft:hover{background:rgba(14,165,164,.04);}
+  /* Header */
+  .bi-head{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    margin-bottom: 10px;
+  }
+  .bi-title h1{
+    margin:0;
+    font-size:16px;
+    font-weight:900;
+    color:var(--bi-txt);
+    letter-spacing:.1px;
+  }
+  .bi-title p{
+    margin:6px 0 0;
+    line-height:1.85;
+    color:var(--bi-mut);
+    font-weight:700;
+    font-size:12.2px;
+  }
 
-  .table-wrap{overflow:auto;padding-bottom:8px;}
-</style>
+  /* Top actions */
+  .bi-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .bi-btn{
+    appearance:none;
+    border:1px solid var(--bi-bdr);
+    background: rgba(255,255,255,.86);
+    padding:8px 11px;
+    border-radius:999px;
+    cursor:pointer;
+    font-weight:900;
+    font-size:12.2px;
+    color:var(--bi-txt);
+    box-shadow: 0 6px 14px rgba(2,6,23,.045);
+    transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+    display:inline-flex;align-items:center;gap:8px;
+    white-space:nowrap;
+    text-decoration:none;
+  }
+  .bi-btn:hover{
+    transform: translateY(-1px);
+    box-shadow: var(--bi-shadow2);
+    border-color: rgba(37,99,235,.22);
+    background: rgba(255,255,255,.92);
+  }
+  .bi-btn:focus{outline:none; box-shadow: var(--bi-shadow2), var(--bi-ring);}
+
+  .bi-btn.red{border-color: rgba(220,38,38,.22); color:#b91c1c}
+  .bi-btn.blue{border-color: rgba(37,99,235,.24); color: #1d4ed8}
+  .bi-btn.green{border-color: rgba(22,163,74,.22); color:#15803d}
+
+  .bi-tag{
+    font-size:10.6px;
+    font-weight:1000;
+    padding:3px 7px;
+    border-radius:999px;
+    background: rgba(2,6,23,.045);
+    color: var(--bi-mut);
+  }
+
+  /* Card blocks */
+  .bi-card{
+    background: var(--bi-card);
+    border: 1px solid var(--bi-bdr);
+    border-radius: 22px;
+    box-shadow: var(--bi-shadow2);
+    overflow:hidden;
+  }
+  .bi-pad{padding:12px}
+
+  /* KPI strip */
+  .bi-kpi-grid{
+    display:grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap:10px;
+  }
+  @media (max-width: 1120px){
+    .bi-kpi-grid{grid-template-columns: repeat(2, minmax(0, 1fr));}
+  }
+  .bi-kpi{
+    border:1px solid rgba(226,232,240,.92);
+    border-radius: 18px;
+    padding: 10px 11px;
+    background:
+      radial-gradient(220px 86px at 15% 0%, rgba(37,99,235,.08), transparent 60%),
+      linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.86));
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    min-height:68px;
+  }
+  .bi-kpi .lab{color:var(--bi-mut);font-weight:900;font-size:11.6px}
+  .bi-kpi .val{color:var(--bi-txt);font-weight:1000;font-size:16px}
+  .bi-kpi .mini{color:var(--bi-mut);font-weight:900;font-size:10.6px;margin-top:3px}
+  .bi-ic{
+    width:38px;height:38px;border-radius:14px;
+    display:flex;align-items:center;justify-content:center;
+    background: rgba(37,99,235,.09);
+    border:1px solid rgba(37,99,235,.16);
+    font-weight:1000;color: #1d4ed8;
+    flex:0 0 auto;
+  }
+  .bi-ic.ok{background: rgba(22,163,74,.09); border-color: rgba(22,163,74,.16); color:#15803d}
+  .bi-ic.w{background: rgba(217,119,6,.09); border-color: rgba(217,119,6,.16); color:#b45309}
+  .bi-ic.g{background: rgba(2,6,23,.05); border-color: rgba(2,6,23,.09); color:#334155}
+
+  /* Filters */
+  .bi-filters{
+    display:grid;
+    grid-template-columns: 2.3fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+    gap:10px;
+    align-items:end;
+  }
+  @media (max-width: 1180px){
+    .bi-filters{grid-template-columns: 1fr 1fr;}
+  }
+
+  .bi-f{display:flex;flex-direction:column;gap:6px;}
+  .bi-lbl{font-size:11.6px;color:var(--bi-mut);font-weight:900}
+
+  .bi-in, .bi-sel{
+    height:38px;
+    border-radius:14px;
+    border:1px solid rgba(226,232,240,.92);
+    background: rgba(255,255,255,.92);
+    padding:0 11px;
+    font-weight:900;
+    color:var(--bi-txt);
+    outline:none;
+    transition: box-shadow .12s ease, border-color .12s ease, background .12s ease;
+    width:100%;
+    font-size:12.2px;
+  }
+  .bi-sel{padding-inline-start:10px}
+  .bi-in:focus,.bi-sel:focus{box-shadow: var(--bi-ring); border-color: rgba(37,99,235,.32)}
+  .bi-btnrow{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start}
+  .bi-btn.sm{padding:8px 13px;font-size:12px}
+
+  /* Table (لا تمرير أفقي) */
+  .bi-table-wrap{overflow-x:hidden;}
+  .bi-table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+    table-layout: fixed;
+  }
+  .bi-table thead th{
+    text-align:right;
+    font-size:11.4px;
+    color: var(--bi-mut);
+    font-weight:1000;
+    padding: 9px 10px;
+    background: rgba(241,245,249,.72);
+    border-bottom:1px solid rgba(226,232,240,.92);
+  }
+  .bi-table tbody td{
+    padding: 11px 10px;
+    border-bottom: 1px solid rgba(226,232,240,.88);
+    vertical-align: middle;
+    color: var(--bi-txt);
+    font-weight:800;
+    font-size:12.6px;
+    overflow:hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bi-table tbody tr:hover td{background: rgba(37,99,235,.032)}
+
+  /* Column widths */
+  th.col-p, td.col-p{width: 28%;}
+  th.col-dom, td.col-dom{width: 10%;}
+  th.col-quiz, td.col-quiz{width: 10%;}
+  th.col-st, td.col-st{width: 10%;}
+  th.col-prog, td.col-prog{width: 16%;}
+  th.col-score, td.col-score{width: 8%;}
+  th.col-time, td.col-time{width: 10%;}
+  th.col-ip, td.col-ip{width: 8%;}
+  th.col-act, td.col-act{width: 10%;}
+
+  @media (max-width: 980px){
+    th.col-ip, td.col-ip{display:none;}
+    th.col-time, td.col-time{display:none;}
+    th.col-act, td.col-act{width: 18%;}
+    th.col-p, td.col-p{width: 40%;}
+  }
+
+  /* Participant cell */
+  .bi-pname{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .bi-pname .n{font-weight:1000;color:var(--bi-txt);overflow:hidden;text-overflow:ellipsis}
+  .bi-pname .s{font-weight:800;color:var(--bi-mut);font-size:11.4px}
+
+  /* Chips */
+  .bi-chip{
+    display:inline-flex;align-items:center;gap:7px;
+    padding:6px 9px;border-radius:999px;
+    border:1px solid rgba(226,232,240,.92);
+    background: rgba(255,255,255,.90);
+    font-weight:900;
+    font-size:11.6px;
+    color: var(--bi-txt);
+    max-width:100%;
+  }
+  .bi-dot{width:7px;height:7px;border-radius:99px;background: rgba(100,116,139,.9)}
+  .bi-chip.ok{border-color: rgba(22,163,74,.24); background: rgba(22,163,74,.06); color:#14532d}
+  .bi-chip.w{border-color: rgba(217,119,6,.24); background: rgba(217,119,6,.07); color:#7c2d12}
+  .bi-chip.bad{border-color: rgba(220,38,38,.24); background: rgba(220,38,38,.07); color:#7f1d1d}
+  .bi-chip.blue{border-color: rgba(37,99,235,.22); background: rgba(37,99,235,.055); color:#1d4ed8}
+
+  /* Progress */
+  .bi-prog{display:flex;align-items:center;gap:10px;min-width:0;}
+  .bi-bar{
+    flex:1;
+    height:10px;border-radius:999px;
+    background: rgba(148,163,184,.20);
+    border:1px solid rgba(226,232,240,.88);
+    overflow:hidden;
+  }
+  .bi-bar > span{
+    display:block;height:100%;
+    background: linear-gradient(90deg, rgba(37,99,235,.95), rgba(29,78,216,.84));
+    width:0%;
+  }
+  .bi-prog .t{font-size:11.4px;color:var(--bi-mut);font-weight:1000}
+  .bi-prog .b{font-size:11.6px;color:var(--bi-txt);font-weight:1000}
+
+  /* Actions in table */
+  .bi-act{display:flex;gap:8px;flex-wrap:wrap}
+  .bi-act .bi-btn{padding:7px 10px;font-size:11.8px}
+
+  /* Pagination */
+  .bi-pager{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+    padding: 10px 12px;
+    border-top: 1px solid rgba(226,232,240,.85);
+    background: rgba(255,255,255,.55);
+  }
+  .bi-pager .info{color:var(--bi-mut);font-weight:900;font-size:11.8px}
+  .bi-pbtn{
+    padding:8px 11px;border-radius:12px;border:1px solid var(--bi-bdr);
+    background: rgba(255,255,255,.90);
+    font-weight:900;color:var(--bi-txt);
+    text-decoration:none;
+    display:inline-flex;
+  }
+
+  /* Mobile spacing */
+  @media (max-width: 640px){
+    .bi-shell{padding:12px;border-radius:22px;}
+    .bi-pad{padding:12px;}
+    .bi-tools{gap:6px}
+    .bi-btn{padding:7px 10px;font-size:12px}
+  }
 {% endblock %}
 
 {% block content %}
-<div class="card">
-  <div class="admin-head">
-    <div class="admin-title">
-      <h2>لوحة الإدارة</h2>
-      <div class="mut sub">بحث + فلاتر + إجراءات + تصدير النتائج + استيراد</div>
-    </div>
+<div class="bi-wrap">
+  <div class="bi-shell">
 
-    <div class="tabs">
-      <a class="tab primary" href="{% url 'quiz:staff_manage' %}">النتائج</a>
-      <a class="tab" href="{% url 'quiz:staff_import_questions' %}">استيراد الأسئلة</a>
-      <a class="tab" href="{% url 'quiz:staff_import_participants' %}">استيراد المتقدمين</a>
-    </div>
-  </div>
-
-  <div class="kpis">
-    <div class="kpi"><div class="mut">إجمالي المحاولات (حسب الفلاتر)</div><b>{{ kpi.total }}</b><div class="tag">Total</div></div>
-    <div class="kpi"><div class="mut">محاولات منتهية</div><b>{{ kpi.finished }}</b><div class="tag">Finished</div></div>
-    <div class="kpi"><div class="mut">محاولات جارية</div><b>{{ kpi.running }}</b><div class="tag">Running</div></div>
-    <div class="kpi"><div class="mut">متوسط الدرجة</div><b>{{ kpi.avg_score }}</b><div class="tag">Avg</div></div>
-  </div>
-
-  <div style="height:14px"></div>
-
-  <form method="get" class="glass filters">
-    <div class="filters-grid">
-      <div>
-        <span class="lbl">بحث (سجل/اسم)</span>
-        <input name="q" value="{{ filters.q }}" placeholder="اكتب السجل أو الاسم...">
+    <div class="bi-head">
+      <div class="bi-title">
+        <h1>لوحة الإدارة — المحاولات</h1>
+        <p>عرض إحصائي: مؤشرات KPI + فلاتر + جدول ثابت الأعمدة (بدون تمرير أفقي).</p>
       </div>
 
-      <div>
-        <span class="lbl">الحالة</span>
-        <select name="status">
-          <option value="all" {% if filters.status == "all" %}selected{% endif %}>الكل</option>
-          <option value="finished" {% if filters.status == "finished" %}selected{% endif %}>منتهي</option>
-          <option value="running" {% if filters.status == "running" %}selected{% endif %}>جارٍ</option>
-        </select>
-      </div>
-
-      <div>
-        <span class="lbl">الاختبار</span>
-        <select name="quiz">
-          <option value="">الكل</option>
-          {% for z in quizzes %}
-            <option value="{{ z.id }}" {% if filters.quiz|stringformat:"s" == z.id|stringformat:"s" %}selected{% endif %}>
-              {{ z.title }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div>
-        <span class="lbl">الترتيب</span>
-        <select name="sort">
-          <option value="-started_at" {% if filters.sort == "-started_at" %}selected{% endif %}>الأحدث</option>
-          <option value="started_at" {% if filters.sort == "started_at" %}selected{% endif %}>الأقدم</option>
-          <option value="-score" {% if filters.sort == "-score" %}selected{% endif %}>الأعلى درجة</option>
-          <option value="score" {% if filters.sort == "score" %}selected{% endif %}>الأقل درجة</option>
-        </select>
-      </div>
-
-      <button class="btn" type="submit">تطبيق</button>
-      <a class="btn soft" href="{% url 'quiz:staff_manage' %}">مسح</a>
-    </div>
-
-    <div class="export-row">
-      <div class="export-hint">
-        التصدير يحترم الفلاتر الحالية (إن وجدت).
-        <span class="meta-chip">?{{ request.GET.urlencode|default:"(بدون فلاتر)" }}</span>
-      </div>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <a class="btn secondary" href="{% url 'quiz:staff_export_csv' %}?{{ request.GET.urlencode }}">تصدير CSV</a>
-        <a class="btn secondary" href="{% url 'quiz:staff_export_xlsx' %}?{{ request.GET.urlencode }}">تصدير Excel</a>
+      <div class="bi-tools">
+        <a class="bi-btn red" href="{% url 'quiz:staff_logout' %}"><span class="bi-tag">Logout</span> خروج</a>
+        <a class="bi-btn" href="{% url 'quiz:staff_manage' %}"><span class="bi-tag">Reset</span> تصفير الفلاتر</a>
+        <a class="bi-btn blue" href="{% url 'quiz:staff_export_csv' %}"><span class="bi-tag">CSV</span> تصدير CSV</a>
+        <a class="bi-btn blue" href="{% url 'quiz:staff_export_xlsx' %}"><span class="bi-tag">XLSX</span> تصدير XLSX</a>
+        <a class="bi-btn green" href="{% url 'quiz:staff_import_questions' %}"><span class="bi-tag">Sheets 3</span> استيراد الأسئلة</a>
+        <a class="bi-btn green" href="{% url 'quiz:staff_import_participants' %}"><span class="bi-tag">XLSX</span> استيراد المرشحين</a>
       </div>
     </div>
-  </form>
 
-  <div style="height:14px"></div>
+    <div class="bi-card">
+      <div class="bi-pad">
 
-  <div class="card" style="padding:0;overflow:hidden;">
-    <div class="table-wrap scroll-x">
-      <table>
-        <thead>
-          <tr class="mut">
-            <th style="min-width:120px;">السجل</th>
-            <th style="min-width:240px;">المتقدم</th>
-            <th style="min-width:180px;">الاختبار</th>
-            <th style="min-width:80px;">الدرجة</th>
-            <th style="min-width:110px;">الحالة</th>
-            <th style="min-width:190px;">الوقت</th>
-            <th style="min-width:250px;">إجراءات</th>
-          </tr>
-        </thead>
+        <!-- KPI -->
+        <div class="bi-kpi-grid">
+          <div class="bi-kpi">
+            <div>
+              <div class="lab">إجمالي النتائج (ضمن الفلاتر)</div>
+              <div class="val">{{ kpi.total }}</div>
+              <div class="mini">N</div>
+            </div>
+            <div class="bi-ic g">Σ</div>
+          </div>
 
-        <tbody>
-          {% for a in attempts %}
-            <tr>
-              <td><b>{{ a.participant.national_id }}</b></td>
+          <div class="bi-kpi">
+            <div>
+              <div class="lab">مكتملة</div>
+              <div class="val">{{ kpi.finished }}</div>
+              <div class="mini">Finished</div>
+            </div>
+            <div class="bi-ic ok">✓</div>
+          </div>
 
-              <td>
-                <div class="name-cell">
-                  <b>{{ a.participant.full_name|default:"—" }}</b>
-                  <div class="mut">
-                    <span class="meta-chip">IP: {{ a.started_ip|default:"—" }}</span>
-                  </div>
-                </div>
-              </td>
+          <div class="bi-kpi">
+            <div>
+              <div class="lab">جارية</div>
+              <div class="val">{{ kpi.running }}</div>
+              <div class="mini">Running</div>
+            </div>
+            <div class="bi-ic w">⏳</div>
+          </div>
 
-              <td>{{ a.quiz.title }}</td>
-              <td><b>{{ a.score }}</b></td>
+          <div class="bi-kpi">
+            <div>
+              <div class="lab">متوسط الدرجة (المنتهية)</div>
+              <div class="val">{{ kpi.avg_score }}</div>
+              <div class="mini">Mean</div>
+            </div>
+            <div class="bi-ic">μ</div>
+          </div>
 
-              <td>
-                {% if a.is_finished %}
-                  <span class="pill ok">منتهي</span>
-                {% else %}
-                  <span class="pill warn">جارٍ</span>
-                {% endif %}
-              </td>
+          <div class="bi-kpi">
+            <div>
+              <div class="lab">عدد الأسئلة</div>
+              <div class="val">{{ total_questions|default:50 }}</div>
+              <div class="mini">Total Q</div>
+            </div>
+            <div class="bi-ic g">Q</div>
+          </div>
+        </div>
 
-              <td>
-                <div style="display:flex;flex-direction:column;gap:6px;">
-                  <span class="meta-chip">بدأ: {{ a.started_at|date:"Y-m-d H:i" }}</span>
-                  <span class="meta-chip">انتهى: {% if a.finished_at %}{{ a.finished_at|date:"Y-m-d H:i" }}{% else %}—{% endif %}</span>
-                </div>
-              </td>
+        <div style="height:10px"></div>
 
-              <td>
-                <div class="actions">
-                  <a class="btn secondary small" href="{% url 'quiz:staff_attempt_detail' a.id %}">تفاصيل</a>
+        <!-- Filters -->
+        <form method="get" class="bi-filters">
+          <div class="bi-f">
+            <div class="bi-lbl">بحث (هوية/اسم)</div>
+            <input class="bi-in" name="q" value="{{ filters.q }}" placeholder="اكتب رقم الهوية أو الاسم">
+          </div>
 
-                  {% if not a.is_finished %}
-                    <form method="post" action="{% url 'quiz:staff_attempt_finish' a.id %}" style="margin:0;"
-                          data-confirm="1"
-                          data-confirm-title="إنهاء المحاولة"
-                          data-confirm-message="تأكيد إنهاء المحاولة الجارية؟"
-                          data-confirm-sub="سيتم اعتبار المحاولة منتهية ولن يستطيع المتقدم المتابعة."
-                          data-confirm-ok="إنهاء"
-                          data-confirm-cancel="إلغاء"
-                          data-confirm-danger="1">
-                      {% csrf_token %}
-                      <button class="btn soft small" type="submit">إنهاء</button>
-                    </form>
-                  {% endif %}
+          <div class="bi-f">
+            <div class="bi-lbl">الحالة</div>
+            <select class="bi-sel" name="status">
+              <option value="all" {% if filters.status == "all" %}selected{% endif %}>الكل</option>
+              <option value="finished" {% if filters.status == "finished" %}selected{% endif %}>مكتمل</option>
+              <option value="running" {% if filters.status == "running" %}selected{% endif %}>جاري</option>
+            </select>
+          </div>
 
-                  <form method="post" action="{% url 'quiz:staff_attempt_reset' a.id %}" style="margin:0;"
-                        data-confirm="1"
-                        data-confirm-title="إعادة فتح الاختبار"
-                        data-confirm-message="تأكيد إعادة فتح الاختبار لهذا الموظف؟"
-                        data-confirm-sub="سيتم حذف المحاولة الحالية وإتاحة الاختبار من جديد."
-                        data-confirm-ok="إعادة فتح"
-                        data-confirm-cancel="إلغاء"
-                        data-confirm-danger="1">
-                    {% csrf_token %}
-                    <button class="btn danger small" type="submit">إعادة فتح</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-          {% empty %}
-            <tr><td colspan="7" class="mut" style="padding:14px;">لا توجد نتائج حسب الفلاتر الحالية.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+          <div class="bi-f">
+            <div class="bi-lbl">المجال</div>
+            <select class="bi-sel" name="domain">
+              <option value="" {% if not filters.domain %}selected{% endif %}>الكل</option>
+              <option value="deputy" {% if filters.domain == "deputy" %}selected{% endif %}>وكيل</option>
+              <option value="counselor" {% if filters.domain == "counselor" %}selected{% endif %}>موجه طلابي</option>
+              <option value="activity" {% if filters.domain == "activity" %}selected{% endif %}>رائد نشاط</option>
+            </select>
+          </div>
+
+          <div class="bi-f">
+            <div class="bi-lbl">الاختبار</div>
+            <select class="bi-sel" name="quiz">
+              <option value="" {% if not filters.quiz %}selected{% endif %}>الكل</option>
+              {% for qz in quizzes %}
+                <option value="{{ qz.id }}" {% if filters.quiz == qz.id|stringformat:"s" %}selected{% endif %}>{{ qz.title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="bi-f">
+            <div class="bi-lbl">سبب الإنهاء</div>
+            <select class="bi-sel" name="fr">
+              <option value="" {% if not filters.fr %}selected{% endif %}>الكل</option>
+              <option value="normal" {% if filters.fr == "normal" %}selected{% endif %}>طبيعي</option>
+              <option value="timeout" {% if filters.fr == "timeout" %}selected{% endif %}>انتهاء وقت</option>
+              <option value="forced" {% if filters.fr == "forced" %}selected{% endif %}>إداري</option>
+            </select>
+          </div>
+
+          <div class="bi-f">
+            <div class="bi-lbl">من تاريخ</div>
+            <input class="bi-in" type="date" name="from" value="{{ filters.from }}">
+          </div>
+
+          <div class="bi-f">
+            <div class="bi-lbl">إلى تاريخ</div>
+            <input class="bi-in" type="date" name="to" value="{{ filters.to }}">
+          </div>
+
+          <div class="bi-f">
+            <div class="bi-lbl">ترتيب</div>
+            <select class="bi-sel" name="sort">
+              <option value="-started_at" {% if filters.sort == "-started_at" %}selected{% endif %}>الأحدث</option>
+              <option value="started_at" {% if filters.sort == "started_at" %}selected{% endif %}>الأقدم</option>
+              <option value="-score" {% if filters.sort == "-score" %}selected{% endif %}>الأعلى درجة</option>
+              <option value="score" {% if filters.sort == "score" %}selected{% endif %}>الأقل درجة</option>
+            </select>
+          </div>
+
+          <div class="bi-btnrow">
+            <button class="bi-btn blue sm" type="submit">تطبيق</button>
+            <a class="bi-btn sm" href="{% url 'quiz:staff_manage' %}">مسح</a>
+          </div>
+        </form>
+
+        <div style="height:12px"></div>
+
+        <!-- Table -->
+        <div class="bi-table-wrap">
+          <table class="bi-table">
+            <thead>
+              <tr>
+                <th class="col-p">المشارك</th>
+                <th class="col-dom">المجال</th>
+                <th class="col-quiz">الاختبار</th>
+                <th class="col-st">الحالة</th>
+                <th class="col-prog">التقدم</th>
+                <th class="col-score">الدرجة</th>
+                <th class="col-time">الوقت</th>
+                <th class="col-ip">IP</th>
+                <th class="col-act">إجراءات</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% for a in attempts %}
+                <tr>
+                  <td class="col-p">
+                    <div class="bi-pname">
+                      <div class="n">{{ a.participant.full_name }}</div>
+                      <div class="s">هوية: {{ a.participant.national_id }}</div>
+                    </div>
+                  </td>
+
+                  <td class="col-dom">
+                    <span class="bi-chip blue"><span class="bi-dot"></span>{{ a.domain_label }}</span>
+                  </td>
+
+                  <td class="col-quiz">
+                    <span class="bi-chip"><span class="bi-dot"></span>{{ a.quiz.title }}</span>
+                  </td>
+
+                  <td class="col-st">
+                    {% if a.is_finished %}
+                      <span class="bi-chip ok"><span class="bi-dot" style="background:rgba(22,163,74,.9)"></span>مكتمل</span>
+                    {% else %}
+                      <span class="bi-chip w"><span class="bi-dot" style="background:rgba(217,119,6,.9)"></span>جاري</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="col-prog">
+                    <div class="bi-prog">
+                      <div class="bi-bar">
+                        <span style="width: {{ a.progress_pct|default:0 }}%"></span>
+                      </div>
+                      <div style="display:flex;flex-direction:column;gap:2px;min-width:108px">
+                        <div class="b">{{ a.current_index|default:0 }} / {{ total_questions|default:50 }}</div>
+                        <div class="t">باقي {{ a.remaining_q|default:0 }}</div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td class="col-score">
+                    <span class="bi-chip">
+                      {% if a.is_finished %}{{ a.score|default:0 }}{% else %}—{% endif %}
+                    </span>
+                  </td>
+
+                  <td class="col-time">
+                    <span class="bi-chip">{% if a.started_at %}{{ a.started_at|date:"Y-m-d H:i" }}{% else %}—{% endif %}</span>
+                  </td>
+
+                  <td class="col-ip">
+                    <span class="bi-chip">{{ a.started_ip|default:"—" }}</span>
+                  </td>
+
+                  <td class="col-act">
+                    <div class="bi-act">
+                      <a class="bi-btn" href="{% url 'quiz:staff_attempt_detail' a.id %}">تفاصيل</a>
+
+                      {% if not a.is_finished %}
+                        <a class="bi-btn red" href="{% url 'quiz:staff_attempt_finish_confirm' a.id %}">إنهاء</a>
+                      {% endif %}
+
+                      <a class="bi-btn" href="{% url 'quiz:staff_attempt_reset_confirm' a.id %}">إعادة</a>
+                    </div>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="9" style="padding:16px;color:var(--bi-mut);font-weight:900">
+                    لا توجد نتائج ضمن الفلاتر الحالية.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pager -->
+        <div class="bi-pager">
+          <div class="info">
+            الصفحة {{ attempts.number }} من {{ attempts.paginator.num_pages }} — إجمالي النتائج: {{ attempts.paginator.count }}
+          </div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            {% if attempts.has_previous %}
+              <a class="bi-pbtn" href="?page=1">الأولى</a>
+              <a class="bi-pbtn" href="?page={{ attempts.previous_page_number }}">السابق</a>
+            {% endif %}
+
+            {% if attempts.has_next %}
+              <a class="bi-pbtn" href="?page={{ attempts.next_page_number }}">التالي</a>
+              <a class="bi-pbtn" href="?page={{ attempts.paginator.num_pages }}">الأخيرة</a>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
     </div>
 
-    <div class="pagination">
-      <div class="mut">
-        صفحة {{ attempts.number }} من {{ attempts.paginator.num_pages }} — إجمالي المعروض: {{ attempts.paginator.count }}
-      </div>
-
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        {% with qs=request.GET.urlencode %}
-          {% if attempts.has_previous %}
-            <a class="btn secondary small" href="?{{ qs }}{% if qs %}&{% endif %}page={{ attempts.previous_page_number }}">السابق</a>
-          {% endif %}
-          {% if attempts.has_next %}
-            <a class="btn secondary small" href="?{{ qs }}{% if qs %}&{% endif %}page={{ attempts.next_page_number }}">التالي</a>
-          {% endif %}
-        {% endwith %}
-      </div>
-    </div>
   </div>
 </div>
 {% endblock %}

@@ -20,39 +20,60 @@
       --fs-lg: 16px;
       --fs-h2: 18px;
 
-      --bg1:#f6fbff; --bg2:#f7fff9;
-      --txt:#0b2b22; --mut:#6b7f8a;
-      --line:#e7eef6; --card:#ffffff;
+      /* خلفية حيادية “BI” */
+      --bg1:#f6fbff;
+      --bg2:#f7fff9;
 
+      /* نص */
+      --txt:#0b2b22;
+      --mut:#6b7f8a;
+      --ink:#0f172a;
+
+      /* حدود/بطاقات */
+      --line:#e7eef6;
+      --card:#ffffff;
+
+      /* ألوان العلامة */
       --brand:#0ea5a4;
       --brand2:#10b981;
       --warn:#f59e0b;
       --danger:#ef4444;
       --info:#3b82f6;
-      --ink:#0f172a;
 
       --r:18px;
       --shadow:0 14px 40px rgba(2,44,34,.09);
       --shadow2:0 8px 20px rgba(2,44,34,.07);
+
+      /* أحجام حاوية (أوسع لتختفي التمريرات) */
+      --container: 1380px;
     }
 
     *{box-sizing:border-box}
     html,body{height:100%}
+    html,body{overflow-x:hidden;} /* ✅ يمنع أي سحب أفقي عام */
+
     body{
       margin:0;
       font-family:var(--ff);
       font-size:var(--fs);
       color:var(--txt);
       background:
-        radial-gradient(900px 420px at 10% 5%, rgba(14,165,164,.12), transparent 60%),
-        radial-gradient(900px 420px at 90% 10%, rgba(16,185,129,.12), transparent 60%),
+        radial-gradient(900px 420px at 10% 5%, rgba(14,165,164,.10), transparent 60%),
+        radial-gradient(900px 420px at 90% 10%, rgba(16,185,129,.10), transparent 60%),
         linear-gradient(180deg,var(--bg1),var(--bg2));
     }
 
     a{color:inherit}
-    .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 40px;}
+
+    /* ✅ حاوية أوسع + Responsive */
+    .wrap{
+      max-width:var(--container);
+      margin:0 auto;
+      padding:18px 16px 40px;
+    }
+
     .frame{
-      background:rgba(255,255,255,.70);
+      background:rgba(255,255,255,.72);
       border:1px solid rgba(231,238,246,.95);
       border-radius:24px;
       box-shadow:var(--shadow);
@@ -65,13 +86,19 @@
     .topbar{
       position:sticky; top:0; z-index:50;
       backdrop-filter: blur(10px);
-      background: rgba(255,255,255,.76);
+      background: rgba(255,255,255,.78);
       border-bottom:1px solid rgba(231,238,246,.95);
     }
     .topbar-inner{
-      max-width:1180px;margin:0 auto;padding:10px 16px;
-      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      max-width:var(--container);
+      margin:0 auto;
+      padding:10px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
     }
+
     .brand{
       display:flex;align-items:center;gap:10px;
       font-weight:900;
@@ -89,7 +116,14 @@
       margin-top:2px;
       font-size:var(--fs-sm);
     }
-    .nav{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;align-items:center;}
+
+    .nav{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      align-items:center;
+    }
 
     h2{font-size:var(--fs-h2); margin:0;}
     .mut{color:var(--mut); font-size:var(--fs-sm);}
@@ -104,7 +138,13 @@
       box-shadow:var(--shadow2);
       padding:16px;
     }
-    .row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+    .row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
 
     .btn{
       display:inline-flex;align-items:center;justify-content:center;gap:8px;
@@ -121,7 +161,7 @@
       text-decoration:none;
       user-select:none;
     }
-    .btn:hover{filter:brightness(.98); transform: translateY(-1px); box-shadow:0 14px 26px rgba(16,185,129,.18);}
+    .btn:hover{filter:brightness(.985); transform: translateY(-1px); box-shadow:0 14px 26px rgba(16,185,129,.18);}
     .btn:active{transform: translateY(0);}
     .btn:focus{outline:none; box-shadow:0 0 0 4px rgba(14,165,164,.16), 0 14px 26px rgba(16,185,129,.18);}
 
@@ -159,10 +199,26 @@
       box-shadow:0 0 0 4px rgba(14,165,164,.12);
     }
 
-    table{width:100%;border-collapse:collapse;font-size:var(--fs-sm);}
-    th,td{padding:9px;border-bottom:1px solid var(--line);text-align:right;vertical-align:middle;}
+    /* ===========================
+       Tables (افتراضي آمن)
+    ============================ */
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:var(--fs-sm);
+    }
+    th,td{
+      padding:9px;
+      border-bottom:1px solid var(--line);
+      text-align:right;
+      vertical-align:middle;
+    }
     thead th{font-size:12.2px}
     tbody tr:hover{background:rgba(14,165,164,.04)}
+
+    /* ✅ استخدم هذا فقط إذا احتجت تمرير جدول (اختياري) */
+    .table-wrap{width:100%; overflow-x:auto;}
+    .table-wrap table{min-width: 980px;}
 
     .pill{
       display:inline-block;
@@ -181,10 +237,7 @@
       scrollbar-color: rgba(14,165,164,.55) rgba(231,238,246,.75);
     }
     .scroll-x::-webkit-scrollbar,
-    .scroll-y::-webkit-scrollbar{
-      height:10px;
-      width:10px;
-    }
+    .scroll-y::-webkit-scrollbar{height:10px;width:10px;}
     .scroll-x::-webkit-scrollbar-track,
     .scroll-y::-webkit-scrollbar-track{
       background: rgba(231,238,246,.75);
@@ -195,10 +248,6 @@
       background: linear-gradient(135deg, rgba(14,165,164,.9), rgba(16,185,129,.9));
       border-radius:999px;
       border:2px solid rgba(231,238,246,.75);
-    }
-    .scroll-x::-webkit-scrollbar-thumb:hover,
-    .scroll-y::-webkit-scrollbar-thumb:hover{
-      filter: brightness(.98);
     }
 
     /* ===========================
@@ -287,7 +336,16 @@
     .btn.light{background:#fff;color:var(--ink);border:1px solid rgba(231,238,246,.95);box-shadow:none;}
     .btn.light:hover{background:rgba(14,165,164,.04);}
 
-    /* Page-level extra CSS */
+    /* ✅ موبايل (ضعه قبل أي CSS إضافي من الصفحات) */
+    @media (max-width: 640px){
+      .wrap{padding:12px 12px 26px;}
+      .frame{padding:12px;border-radius:20px;}
+      .topbar-inner{padding:10px 12px; flex-wrap:wrap; gap:8px;}
+      .nav{width:100%; justify-content:flex-start;}
+      .brand small{display:none;}
+    }
+
+    /* ✅ Page-level extra CSS (آخر شيء) */
     {% block base_css_extra %}{% endblock %}
   </style>
 

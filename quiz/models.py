@@ -3,15 +3,39 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
 
+# ======================================================
+# Shared choices
+# ======================================================
+DOMAIN_CHOICES = (
+    ("deputy", "وكيل"),
+    ("counselor", "موجه طلابي"),
+    ("activity", "رائد نشاط"),
+)
+
+FINISH_REASON_CHOICES = (
+    ("normal", "طبيعي"),
+    ("timeout", "تلقائي/انتهاء وقت"),
+    ("forced", "إغلاق إداري"),
+)
+
+
+def domain_label(domain: str) -> str:
+    return dict(DOMAIN_CHOICES).get(domain or "", domain or "")
+
+
+# ======================================================
+# Quiz + Questions
+# ======================================================
 class Quiz(models.Model):
     title = models.CharField("عنوان الاختبار", max_length=200, unique=True)
     is_active = models.BooleanField("نشط؟", default=False)
 
-    # ✅ لكل سؤال كم ثانية (بدل ما تكون ثابتة في views)
+    # لكل سؤال كم ثانية
     per_question_seconds = models.PositiveIntegerField("ثواني لكل سؤال", default=50)
 
     created_at = models.DateTimeField("تاريخ الإنشاء", default=timezone.now)
@@ -23,40 +47,6 @@ class Quiz(models.Model):
 
     def __str__(self) -> str:
         return self.title
-
-
-class Participant(models.Model):
-    DOMAIN_CHOICES = (
-        ("deputy", "وكيل"),
-        ("counselor", "موجه طلابي"),
-        ("activity", "رائد نشاط"),
-    )
-
-    national_id = models.CharField("رقم الهوية/السجل", max_length=20, unique=True, db_index=True)
-    full_name = models.CharField("الاسم", max_length=220)
-    phone_last4 = models.CharField("آخر 4 أرقام من الجوال", max_length=4, blank=True, default="")
-
-    # ✅ default يحل مشكلة السجلات القديمة NULL وقت makemigrations
-    domain = models.CharField(
-        "المجال",
-        max_length=30,
-        choices=DOMAIN_CHOICES,
-        default="deputy",
-        db_index=True,
-    )
-
-    is_allowed = models.BooleanField("مسموح بالدخول؟", default=True)
-    has_taken_exam = models.BooleanField("أدى الاختبار؟", default=False)
-
-    created_at = models.DateTimeField("تاريخ الإضافة", default=timezone.now)
-
-    class Meta:
-        ordering = ["-id"]
-        verbose_name = "مشارك"
-        verbose_name_plural = "المشاركون"
-
-    def __str__(self) -> str:
-        return f"{self.full_name} ({self.national_id})"
 
 
 class Question(models.Model):
@@ -88,15 +78,111 @@ class Choice(models.Model):
         return f"Choice({self.id})"
 
 
-class Attempt(models.Model):
-    FINISH_REASON_CHOICES = (
-        ("normal", "طبيعي"),
-        ("timeout", "تلقائي/انتهاء وقت"),
-        ("forced", "إغلاق إداري"),
-    )
+# ======================================================
+# Participant (Person) + Enrollment (Multi-domain)
+# ======================================================
+class Participant(models.Model):
+    """
+    ✅ يمثل الشخص (سجل واحد فقط لكل رقم)
+    """
+    national_id = models.CharField("رقم الهوية/السجل", max_length=20, unique=True, db_index=True)
+    full_name = models.CharField("الاسم", max_length=220)
+    phone_last4 = models.CharField("آخر 4 أرقام من الجوال", max_length=4, blank=True, default="")
 
+    # صلاحية عامة للشخص (غير مرتبطة بمجال)
+    is_allowed = models.BooleanField("مسموح بالدخول؟", default=True)
+
+    # ✅ قفل شامل بعد أول دخول فعلي لأي اختبار
+    has_taken_exam = models.BooleanField("بدأ/أدى اختبار؟", default=False)
+
+    locked_domain = models.CharField(
+        "المجال المقفول عليه",
+        max_length=30,
+        choices=DOMAIN_CHOICES,
+        blank=True,
+        default="",
+        db_index=True,
+    )
+    locked_at = models.DateTimeField("وقت القفل", null=True, blank=True)
+
+    created_at = models.DateTimeField("تاريخ الإضافة", default=timezone.now)
+
+    class Meta:
+        ordering = ["-id"]
+        verbose_name = "مشارك"
+        verbose_name_plural = "المشاركون"
+
+    def __str__(self) -> str:
+        return f"{self.full_name} ({self.national_id})"
+
+    @property
+    def locked_domain_label(self) -> str:
+        return domain_label(self.locked_domain)
+
+
+class Enrollment(models.Model):
+    """
+    ✅ تسجيل الشخص في مجال (متعدد المجالات لنفس السجل)
+    """
+    participant = models.ForeignKey(Participant, on_delete=models.CASCADE, related_name="enrollments", verbose_name="المشارك")
+    domain = models.CharField("المجال", max_length=30, choices=DOMAIN_CHOICES, db_index=True)
+    is_allowed = models.BooleanField("مسموح لهذا المجال؟", default=True)
+    created_at = models.DateTimeField("تاريخ الإضافة", default=timezone.now)
+
+    class Meta:
+        ordering = ["-id"]
+        unique_together = (("participant", "domain"),)
+        verbose_name = "تسجيل مجال"
+        verbose_name_plural = "تسجيلات المجالات"
+
+    def __str__(self) -> str:
+        return f"{self.participant.national_id} -> {domain_label(self.domain)}"
+
+
+# ======================================================
+# Exam Window (time-based per domain)
+# ======================================================
+class ExamWindow(models.Model):
+    """
+    ✅ نافذة زمنية لمجال معين
+    مثال: activity 09:00 - 09:50 ، counselor 10:00 - 10:50 ، deputy 11:00 - 11:50
+    """
+    name = models.CharField("اسم النافذة", max_length=200, blank=True, default="")
+    domain = models.CharField("المجال", max_length=30, choices=DOMAIN_CHOICES, db_index=True)
+
+    starts_at = models.DateTimeField("بداية النافذة", db_index=True)
+    ends_at = models.DateTimeField("نهاية النافذة", db_index=True)
+
+    is_active = models.BooleanField("نشطة؟", default=True, db_index=True)
+    created_at = models.DateTimeField("تاريخ الإنشاء", default=timezone.now)
+
+    class Meta:
+        ordering = ["-starts_at", "-id"]
+        verbose_name = "نافذة اختبار"
+        verbose_name_plural = "نوافذ الاختبارات"
+
+    def __str__(self) -> str:
+        t = self.name.strip() or f"{domain_label(self.domain)}"
+        return f"{t} ({self.starts_at:%Y-%m-%d %H:%M} - {self.ends_at:%H:%M})"
+
+    def clean(self):
+        if self.ends_at and self.starts_at and self.ends_at <= self.starts_at:
+            raise ValidationError("نهاية النافذة يجب أن تكون بعد البداية.")
+
+    @property
+    def domain_label(self) -> str:
+        return domain_label(self.domain)
+
+
+# ======================================================
+# Attempt + Answer
+# ======================================================
+class Attempt(models.Model):
     participant = models.ForeignKey(Participant, on_delete=models.CASCADE, verbose_name="المشارك")
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, verbose_name="الاختبار")
+
+    # ✅ نسجل المجال الذي بدأ به (من النافذة)
+    domain = models.CharField("المجال", max_length=30, choices=DOMAIN_CHOICES, db_index=True)
 
     session_key = models.CharField("مفتاح الجلسة", max_length=64, blank=True, default="", db_index=True)
     started_ip = models.GenericIPAddressField("IP", null=True, blank=True)
@@ -109,8 +195,6 @@ class Attempt(models.Model):
     score = models.PositiveIntegerField("النتيجة", default=0)
 
     is_finished = models.BooleanField("منتهية؟", default=False, db_index=True)
-
-    # ✅ تمييز سبب الإنهاء
     finished_reason = models.CharField(
         "سبب الإنهاء",
         max_length=20,
@@ -119,7 +203,6 @@ class Attempt(models.Model):
         db_index=True,
     )
 
-    # ✅ كم مرة تم تجاوز الوقت
     timed_out_count = models.PositiveIntegerField("عدد مرات انتهاء الوقت", default=0)
 
     class Meta:
@@ -131,7 +214,7 @@ class Attempt(models.Model):
         return f"Attempt({self.id})"
 
     # ---------------------------
-    # Admin helpers / properties
+    # Helpers
     # ---------------------------
     def answered_count(self) -> int:
         return self.answers.filter(answered_at__isnull=False).count()
@@ -176,6 +259,10 @@ class Attempt(models.Model):
     def is_overdue(self) -> bool:
         rem = self.remaining_seconds()
         return (not self.is_finished) and (rem is not None) and (rem <= 0)
+
+    @property
+    def domain_label(self) -> str:
+        return domain_label(self.domain)
 
 
 class Answer(models.Model):

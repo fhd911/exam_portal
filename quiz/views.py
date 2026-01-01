@@ -4,7 +4,7 @@ from __future__ import annotations
 import csv
 import io
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from django.contrib import messages
@@ -20,7 +20,17 @@ from django.views.decorators.http import require_http_methods, require_POST
 from openpyxl import load_workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
-from .models import Answer, Attempt, Choice, Participant, Question, Quiz
+from .models import (
+    Answer,
+    Attempt,
+    Choice,
+    Enrollment,
+    ExamWindow,
+    Participant,
+    Question,
+    Quiz,
+    domain_label,
+)
 
 # ======================================================
 # Session Keys / Constants
@@ -30,12 +40,13 @@ SESSION_CONFIRMED = "participant_confirmed"
 SESSION_ATTEMPT_ID = "attempt_id"
 
 TOTAL_QUESTIONS = 50
+VALID_DOMAINS = {"deputy", "counselor", "activity"}
 
-_AR_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
+_AR_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "0123456789" * 2)
 
 
 # ======================================================
-# Helpers (Excel + Common)
+# Helpers: strings / digits
 # ======================================================
 def _cell_to_str(v: Any) -> str:
     if v is None:
@@ -68,20 +79,8 @@ def _to_bool(v: Any, default: bool) -> bool:
     return default
 
 
-def _domain_label(domain: str) -> str:
-    mapping = {
-        "deputy": "وكيل",
-        "counselor": "موجه طلابي",
-        "activity": "رائد نشاط",
-    }
-    return mapping.get(domain, domain)
-
-
 def _normalize_domain(v: Any) -> str:
-    """
-    ✅ يقبل domain بالإنجليزي أو العربي أو مرادفات شائعة ويعيد القياسي:
-    deputy/counselor/activity
-    """
+    """Accept English/Arabic/variants -> deputy/counselor/activity."""
     s = _cell_to_str(v).strip().lower()
     s = (
         s.replace("ـ", "")
@@ -90,12 +89,10 @@ def _normalize_domain(v: Any) -> str:
         .replace("آ", "ا")
         .replace("ة", "ه")
     )
-
     if s in {"deputy", "counselor", "activity"}:
         return s
     if s == "guidance":
         return "counselor"
-
     if "وكيل" in s:
         return "deputy"
     if "موجه" in s or "توجيه" in s:
@@ -105,6 +102,9 @@ def _normalize_domain(v: Any) -> str:
     return s
 
 
+# ======================================================
+# Helpers: session + attempt
+# ======================================================
 def _ensure_session_key(request: HttpRequest) -> str:
     if not request.session.session_key:
         request.session.create()
@@ -125,34 +125,25 @@ def _get_attempt_from_session(request: HttpRequest) -> Attempt | None:
     return Attempt.objects.filter(id=aid).select_related("participant", "quiz").first()
 
 
+def _compute_score(attempt: Attempt) -> int:
+    return Answer.objects.filter(attempt=attempt, selected_choice__is_correct=True).count()
+
+
 def _finish_attempt(attempt: Attempt, reason: str = "normal") -> None:
-    """
-    ✅ إنهاء محاولة (مع سبب)
-    reason: normal / timeout / forced
-    """
     if attempt.is_finished:
         return
+    attempt.score = _compute_score(attempt)
     attempt.is_finished = True
     attempt.finished_at = timezone.now()
     attempt.finished_reason = reason
-    attempt.save(update_fields=["is_finished", "finished_at", "finished_reason"])
+    attempt.save(update_fields=["score", "is_finished", "finished_at", "finished_reason"])
 
 
-def _compute_score(attempt: Attempt) -> int:
-    return (
-        Answer.objects.filter(attempt=attempt, selected_choice__is_correct=True)
-        .select_related("selected_choice")
-        .count()
-    )
-
-
+# ======================================================
+# Helpers: Quiz selection per domain
+# ======================================================
 def _get_active_quiz_for_domain(domain: str) -> Quiz | None:
-    """
-    ✅ اختيار اختبار المجال من الاختبارات النشطة:
-    - إذا عنوان الاختبار يحتوي Label المجال (وكيل/موجه/رائد)
-    - أو title يساوي domain نفسه
-    """
-    label = _domain_label(domain)
+    label = domain_label(domain)
     qs = Quiz.objects.filter(is_active=True).order_by("-id")
 
     q1 = qs.filter(title__icontains=label).first()
@@ -166,100 +157,157 @@ def _get_active_quiz_for_domain(domain: str) -> Quiz | None:
     return None
 
 
-def _require_quiz_for_participant(request: HttpRequest, p: Participant) -> Quiz | None:
-    quiz = _get_active_quiz_for_domain(p.domain)
+def _require_quiz_for_domain(request: HttpRequest, domain: str) -> Quiz | None:
+    quiz = _get_active_quiz_for_domain(domain)
     if not quiz:
         messages.error(
             request,
-            f"لا يوجد اختبار نشط لمجالك ({_domain_label(p.domain)}). فعّل اختبار هذا المجال من لوحة الإدارة."
+            f"لا يوجد اختبار نشط للمجال ({domain_label(domain)}). فعّل اختبار هذا المجال من لوحة الإدارة.",
         )
         return None
-
     if not Question.objects.filter(quiz=quiz).exists():
         messages.error(request, f"الاختبار النشط ({quiz.title}) لا يحتوي أسئلة. استورد الأسئلة أولاً.")
         return None
-
     return quiz
 
 
+def _peek_quiz_for_domain(domain: str) -> Quiz | None:
+    """مثل require لكن بدون messages (لا نزعج المستخدم في GET)."""
+    quiz = _get_active_quiz_for_domain(domain)
+    if not quiz:
+        return None
+    if not Question.objects.filter(quiz=quiz).exists():
+        return None
+    return quiz
+
+
+# ======================================================
+# Helpers: timing
+# ======================================================
 def _quiz_seconds(attempt: Attempt) -> int:
-    """
-    ✅ وقت السؤال من إعدادات الاختبار
-    """
     try:
         sec = int(attempt.quiz.per_question_seconds or 50)
     except Exception:
         sec = 50
-    return max(5, min(sec, 3600))  # حماية: على الأقل 5 ثواني وبحد أقصى ساعة
+    return max(5, min(sec, 3600))
 
 
-def _auto_advance_if_timeup(attempt: Attempt, questions_count: int) -> int:
+def _auto_advance_if_timeup(attempt: Attempt, questions: list[Question]) -> None:
     """
-    ✅ حماية Server-side:
-    إذا انتهى وقت السؤال الحالي ولم يجب، نسجّل إجابة فارغة وننتقل.
-    - يعتمد على Quiz.per_question_seconds
-    - يزيد timed_out_count
-    - قد يلحق أكثر من سؤال إذا ترك الصفحة فترة طويلة
-
-    Returns: عدد مرات التقدم التلقائي التي حصلت بهذه الزيارة.
-    """
-    advanced = 0
-    sec = _quiz_seconds(attempt)
-
-    while (not attempt.is_finished) and (attempt.current_index < questions_count):
-        now = timezone.now()
-
-        q = (
-            Question.objects.filter(quiz=attempt.quiz)
-            .order_by("order", "id")[attempt.current_index: attempt.current_index + 1]
-            .first()
-        )
-        if not q:
-            break
-
-        ans = Answer.objects.filter(attempt=attempt, question=q).first()
-        if not ans:
-            ans = Answer.objects.create(attempt=attempt, question=q, started_at=now)
-
-        started_at = ans.started_at or now
-        deadline = started_at + timedelta(seconds=sec)
-
-        if now > deadline and ans.answered_at is None:
-            ans.selected_choice = None
-            ans.answered_at = now
-            ans.save(update_fields=["selected_choice", "answered_at"])
-
-            attempt.current_index += 1
-            attempt.timed_out_count = (attempt.timed_out_count or 0) + 1
-            attempt.save(update_fields=["current_index", "timed_out_count"])
-
-            advanced += 1
-            continue
-
-        break
-
-    return advanced
-
-
-def _finalize_attempt_if_done(attempt: Attempt, questions_count: int) -> None:
-    """
-    ✅ إذا خلصت الأسئلة: نحسب النتيجة ونغلق
-    - إذا كان فيه timeouts: نختم السبب timeout
+    Server-side safety net.
+    If current question time is over and not answered -> mark as timed out and move next.
     """
     if attempt.is_finished:
         return
 
-    if attempt.current_index >= questions_count:
+    total = len(questions)
+    if total <= 0:
+        return
+
+    # لو current_index صار خارج النطاق (احتياط)
+    if attempt.current_index < 0:
+        attempt.current_index = 0
+        attempt.save(update_fields=["current_index"])
+        return
+    if attempt.current_index >= total:
+        return
+
+    sec = _quiz_seconds(attempt)
+    now = timezone.now()
+    q = questions[attempt.current_index]
+
+    ans = Answer.objects.filter(attempt=attempt, question=q).first()
+    if not ans:
+        ans = Answer.objects.create(attempt=attempt, question=q, started_at=now)
+
+    started_at = ans.started_at or now
+    deadline = started_at + timedelta(seconds=sec)
+
+    if now > deadline and ans.answered_at is None:
+        ans.selected_choice = None
+        ans.answered_at = now
+        ans.save(update_fields=["selected_choice", "answered_at"])
+
+        attempt.current_index += 1
+        attempt.timed_out_count = (attempt.timed_out_count or 0) + 1
+        attempt.save(update_fields=["current_index", "timed_out_count"])
+
+
+def _finalize_attempt_if_done(attempt: Attempt, total_questions: int) -> None:
+    if attempt.is_finished:
+        return
+    if attempt.current_index >= total_questions:
         attempt.score = _compute_score(attempt)
-        attempt.current_index = questions_count
+        attempt.current_index = total_questions
         attempt.is_finished = True
         attempt.finished_at = timezone.now()
-
-        # ✅ لو صار فيه أي تقدم تلقائي أثناء الاختبار
         attempt.finished_reason = "timeout" if (attempt.timed_out_count or 0) > 0 else "normal"
-
         attempt.save(update_fields=["score", "current_index", "is_finished", "finished_at", "finished_reason"])
-        Participant.objects.filter(id=attempt.participant_id).update(has_taken_exam=True)
+
+
+# ======================================================
+# Window + Enrollment logic (Core)
+# ======================================================
+def _now() -> datetime:
+    return timezone.localtime(timezone.now())
+
+
+def _get_active_window_now() -> ExamWindow | None:
+    now = _now()
+    return (
+        ExamWindow.objects.filter(is_active=True, starts_at__lte=now, ends_at__gt=now)
+        .order_by("starts_at", "id")
+        .first()
+    )
+
+
+def _is_enrolled_for_domain(p: Participant, domain: str) -> bool:
+    return Enrollment.objects.filter(participant=p, domain=domain, is_allowed=True).exists()
+
+
+def _get_next_windows_for_participant(p: Participant, limit: int = 3) -> list[ExamWindow]:
+    now = _now()
+    domains = list(p.enrollments.filter(is_allowed=True).values_list("domain", flat=True))
+    if not domains:
+        return []
+    return list(
+        ExamWindow.objects.filter(is_active=True, starts_at__gt=now, domain__in=domains)
+        .order_by("starts_at", "id")[:limit]
+    )
+
+
+def _window_gate_message(p: Participant, active: ExamWindow | None, next_list: list[ExamWindow]) -> str:
+    if active is None:
+        if not next_list:
+            return "لا يوجد اختبار متاح الآن، ولا يوجد لديك أي تسجيلات فعّالة. تواصل مع الإدارة."
+        nxt = next_list[0]
+        return (
+            "لا يوجد اختبار متاح الآن. "
+            f"أقرب اختبار لك: {nxt.domain_label} — يبدأ {timezone.localtime(nxt.starts_at).strftime('%H:%M')} "
+            f"وينتهي {timezone.localtime(nxt.ends_at).strftime('%H:%M')}."
+        )
+
+    if not _is_enrolled_for_domain(p, active.domain):
+        if not next_list:
+            return f"الاختبار الحالي الآن هو ({active.domain_label}) لكن سجلك غير مسجل في هذا المجال."
+        nxt = next_list[0]
+        return (
+            f"الاختبار المتاح الآن هو ({active.domain_label}) لكن سجلك غير مسجل في هذا المجال. "
+            f"أقرب اختبار مسجل لك: {nxt.domain_label} يبدأ {timezone.localtime(nxt.starts_at).strftime('%H:%M')}."
+        )
+
+    return ""
+
+
+def _locked_message(p: Participant) -> str:
+    if not p.locked_domain:
+        return "تم بدء اختبار سابقاً لهذا السجل. لا يمكنك دخول اختبار آخر."
+    when = timezone.localtime(p.locked_at).strftime("%H:%M") if p.locked_at else ""
+    extra = f" اليوم الساعة {when}" if when else ""
+    return (
+        f"لا يمكنك دخول اختبار آخر لأنك بدأت اختبار ({p.locked_domain_label}){extra}. "
+        f"النظام يسمح باختبار واحد فقط."
+    )
 
 
 # ======================================================
@@ -272,9 +320,7 @@ def home(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET", "POST"])
 def login_view(request: HttpRequest) -> HttpResponse:
     """
-    ✅ بعد النجاح: لا ننشئ Attempt هنا
-    -> نخزن participant_id في session
-    -> نذهب لصفحة confirm (بيانات + إقرار)
+    تسجيل الدخول (تحقق هوية فقط) — لا يتم إنشاء Attempt هنا.
     """
     if request.method == "POST":
         national_id = _digits_only((request.POST.get("national_id") or "").strip())
@@ -288,8 +334,8 @@ def login_view(request: HttpRequest) -> HttpResponse:
             messages.error(request, "آخر 4 أرقام من الجوال يجب أن تكون 4 أرقام فقط.")
             return redirect("quiz:login")
 
-        p = Participant.objects.filter(national_id=national_id, is_allowed=True).first()
-        if not p:
+        p = Participant.objects.filter(national_id=national_id).first()
+        if not p or not p.is_allowed:
             messages.error(request, "غير مسموح لك بدخول الاختبار (غير موجود أو غير مخول).")
             return redirect("quiz:login")
 
@@ -297,13 +343,8 @@ def login_view(request: HttpRequest) -> HttpResponse:
             messages.error(request, "بيانات التحقق غير صحيحة.")
             return redirect("quiz:login")
 
-        # ✅ يمنع دخول أي اختبار ثاني إذا أدى اختبار واحد سابقاً
         if p.has_taken_exam:
-            messages.error(request, "تم أداء الاختبار مسبقاً لهذا السجل.")
-            return redirect("quiz:login")
-
-        quiz = _require_quiz_for_participant(request, p)
-        if not quiz:
+            messages.error(request, _locked_message(p))
             return redirect("quiz:login")
 
         request.session[SESSION_PID] = p.id
@@ -323,8 +364,8 @@ def logout_view(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET", "POST"])
 def confirm_view(request: HttpRequest) -> HttpResponse:
     """
-    ✅ صفحة البيانات + الإقرار.
-    POST: عند الموافقة ننشئ Attempt ثم نذهب للسؤال الأول.
+    صفحة البيانات + الإقرار.
+    POST = محاولة بدء الاختبار ضمن النافذة الحالية فقط.
     """
     p = _get_participant_from_session(request)
     if not p:
@@ -337,52 +378,119 @@ def confirm_view(request: HttpRequest) -> HttpResponse:
         return redirect("quiz:login")
 
     if p.has_taken_exam:
-        messages.error(request, "تم أداء الاختبار مسبقاً لهذا السجل.")
+        messages.error(request, _locked_message(p))
         request.session.flush()
         return redirect("quiz:login")
 
-    quiz = _require_quiz_for_participant(request, p)
-    if not quiz:
-        return redirect("quiz:login")
+    active_window = _get_active_window_now()
+    next_windows = _get_next_windows_for_participant(p, limit=3)
+    current_domain_label = active_window.domain_label if active_window else ""
+
+    # لو فيه نافذة الآن لكن غير مسجّل فيها
+    if active_window and (not _is_enrolled_for_domain(p, active_window.domain)):
+        messages.error(request, _window_gate_message(p, active_window, next_windows))
+        return render(
+            request,
+            "quiz/confirm.html",
+            {
+                "p": p,
+                "quiz": None,
+                "window": active_window,
+                "next_windows": next_windows,
+                "domain_label": current_domain_label,
+            },
+        )
+
+    # لو ما فيه نافذة الآن: نعرض رسالة + مواعيد قادمة
+    if not active_window:
+        messages.info(request, _window_gate_message(p, None, next_windows))
 
     if request.method == "POST":
-        agree = request.POST.get("agree") == "1"
-        if not agree:
+        if request.POST.get("agree") != "1":
             messages.error(request, "لا يمكنك المتابعة بدون الموافقة على الإقرار.")
             return redirect("quiz:confirm")
 
+        # re-check now (لحظة البدء)
+        active_window2 = _get_active_window_now()
+        next_windows2 = _get_next_windows_for_participant(p, limit=3)
+
+        if not active_window2:
+            messages.error(request, _window_gate_message(p, None, next_windows2))
+            return redirect("quiz:confirm")
+
+        if not _is_enrolled_for_domain(p, active_window2.domain):
+            messages.error(request, _window_gate_message(p, active_window2, next_windows2))
+            return redirect("quiz:confirm")
+
+        quiz = _require_quiz_for_domain(request, active_window2.domain)
+        if not quiz:
+            return redirect("quiz:confirm")
+
         skey = _ensure_session_key(request)
-
-        # ✅ لو فيه محاولة جارية لنفس المرشح/نفس الاختبار
-        active_attempt = (
-            Attempt.objects.filter(participant=p, quiz=quiz, is_finished=False)
-            .order_by("-started_at")
-            .first()
-        )
-        if active_attempt:
-            if (active_attempt.session_key or "") == skey:
-                request.session[SESSION_ATTEMPT_ID] = active_attempt.id
-                request.session[SESSION_CONFIRMED] = True
-                return redirect("quiz:question")
-            messages.error(request, "يوجد اختبار جارٍ لهذا السجل من جهاز/جلسة أخرى. تواصل مع الإدارة لإعادة فتحه.")
-            return redirect("quiz:login")
-
         ip = request.META.get("REMOTE_ADDR") or ""
         ua = (request.META.get("HTTP_USER_AGENT") or "")[:255]
 
-        attempt = Attempt.objects.create(
-            participant=p,
-            quiz=quiz,
-            session_key=skey,
-            started_ip=ip or None,
-            user_agent=ua or None,
-        )
+        with transaction.atomic():
+            p_locked = Participant.objects.select_for_update().get(id=p.id)
+
+            if (not p_locked.is_allowed) or p_locked.has_taken_exam:
+                messages.error(
+                    request,
+                    _locked_message(p_locked) if p_locked.has_taken_exam else "تم إيقاف صلاحيتك.",
+                )
+                request.session.flush()
+                return redirect("quiz:login")
+
+            active_attempt = (
+                Attempt.objects.select_for_update()
+                .filter(participant=p_locked, is_finished=False)
+                .order_by("-started_at", "-id")
+                .first()
+            )
+            if active_attempt:
+                # نفس الجلسة -> يكمل
+                if (active_attempt.session_key or "") == skey:
+                    request.session[SESSION_ATTEMPT_ID] = active_attempt.id
+                    request.session[SESSION_CONFIRMED] = True
+                    return redirect("quiz:question")
+
+                messages.error(request, "يوجد اختبار جارٍ لهذا السجل من جهاز/جلسة أخرى. تواصل مع الإدارة لإعادة فتحه.")
+                request.session.flush()
+                return redirect("quiz:login")
+
+            attempt = Attempt.objects.create(
+                participant=p_locked,
+                quiz=quiz,
+                domain=active_window2.domain,
+                session_key=skey,
+                started_ip=ip or None,
+                user_agent=ua or None,
+                started_at=timezone.now(),
+            )
+
+            # ✅ قفل مرة واحدة
+            Participant.objects.filter(id=p_locked.id).update(
+                has_taken_exam=True,
+                locked_domain=active_window2.domain,
+                locked_at=timezone.now(),
+            )
 
         request.session[SESSION_ATTEMPT_ID] = attempt.id
         request.session[SESSION_CONFIRMED] = True
         return redirect("quiz:question")
 
-    return render(request, "quiz/confirm.html", {"p": p, "quiz": quiz})
+    quiz_for_display = _peek_quiz_for_domain(active_window.domain) if active_window else None
+    return render(
+        request,
+        "quiz/confirm.html",
+        {
+            "p": p,
+            "quiz": quiz_for_display,
+            "window": active_window,
+            "next_windows": next_windows,
+            "domain_label": current_domain_label,
+        },
+    )
 
 
 @require_http_methods(["GET", "POST"])
@@ -395,7 +503,6 @@ def question_view(request: HttpRequest) -> HttpResponse:
     if not request.session.get(SESSION_CONFIRMED):
         return redirect("quiz:confirm")
 
-    # ✅ حماية: نفس attempt لازم يكون من نفس session_key
     skey = _ensure_session_key(request)
     if (attempt.session_key or "") and (attempt.session_key != skey):
         messages.error(request, "هذه الجلسة لا تطابق جلسة بدء الاختبار. سجّل الدخول من جديد.")
@@ -411,37 +518,43 @@ def question_view(request: HttpRequest) -> HttpResponse:
         _finish_attempt(attempt, reason="forced")
         return redirect("quiz:finish")
 
-    # ✅ ترقية تلقائية لو انتهى وقت السؤال الحالي (تعتمد على per_question_seconds)
-    _auto_advance_if_timeup(attempt, len(questions))
+    # Safety net (server-side)
+    _auto_advance_if_timeup(attempt, questions)
     _finalize_attempt_if_done(attempt, len(questions))
     if attempt.is_finished:
+        return redirect("quiz:finish")
+
+    # احتياط: لو صار خارج النطاق
+    if attempt.current_index < 0:
+        attempt.current_index = 0
+        attempt.save(update_fields=["current_index"])
+    if attempt.current_index >= len(questions):
+        _finalize_attempt_if_done(attempt, len(questions))
         return redirect("quiz:finish")
 
     q = questions[attempt.current_index]
     choices = list(Choice.objects.filter(question=q).order_by("id"))
 
-    ans, created = Answer.objects.get_or_create(
+    ans, _ = Answer.objects.get_or_create(
         attempt=attempt,
         question=q,
         defaults={"started_at": timezone.now()},
     )
-    # لو قديم ولا بدأ وقت السؤال (حماية)
     if ans.started_at is None:
         ans.started_at = timezone.now()
         ans.save(update_fields=["started_at"])
 
-    # حساب المتبقي (للواجهة)
     now = timezone.now()
     sec = _quiz_seconds(attempt)
     deadline = (ans.started_at or now) + timedelta(seconds=sec)
     remaining = int(max(0, (deadline - now).total_seconds()))
 
     if request.method == "POST":
-        # ✅ لو انتهى الوقت أثناء الإرسال نعتبرها فارغ وننتقل + زيادة timed_out_count
         now2 = timezone.now()
         deadline2 = (ans.started_at or now2) + timedelta(seconds=sec)
         remaining2 = int(max(0, (deadline2 - now2).total_seconds()))
 
+        # time over before submit
         if remaining2 <= 0 and ans.answered_at is None:
             ans.selected_choice = None
             ans.answered_at = now2
@@ -476,14 +589,20 @@ def question_view(request: HttpRequest) -> HttpResponse:
             "choices": choices,
             "index": attempt.current_index + 1,
             "total": len(questions),
-            "question_seconds": sec,          # ✅ من Quiz
-            "remaining_seconds": remaining,   # ✅ من Quiz
+            "question_seconds": sec,
+            "remaining_seconds": remaining,
         },
     )
 
 
 def finish_view(request: HttpRequest) -> HttpResponse:
     attempt = _get_attempt_from_session(request)
+    # لو وصل هنا وما زال غير منتهي (نادر) نختمه بأمان
+    if attempt and not attempt.is_finished:
+        questions_count = Question.objects.filter(quiz=attempt.quiz).count()
+        _finalize_attempt_if_done(attempt, questions_count)
+        if not attempt.is_finished:
+            _finish_attempt(attempt, reason="forced")
     return render(request, "quiz/finish.html", {"attempt": attempt})
 
 
@@ -495,20 +614,34 @@ def staff_logout_view(request: HttpRequest) -> HttpResponse:
     from django.contrib.auth import logout as auth_logout
 
     auth_logout(request)
-    return redirect("quiz:staff_manage")
+    return redirect("quiz:login")
 
 
 # ======================================================
-# Staff - Dashboard
+# Staff - Filters
 # ======================================================
-@staff_member_required
-def staff_manage_view(request: HttpRequest) -> HttpResponse:
+def _parse_date_yyyy_mm_dd(value: str) -> datetime | None:
+    v = (value or "").strip()
+    if not v:
+        return None
+    try:
+        return datetime.strptime(v, "%Y-%m-%d")
+    except Exception:
+        return None
+
+
+def _apply_attempt_filters(request: HttpRequest, qs):
     q = (request.GET.get("q") or "").strip()
     status = (request.GET.get("status") or "all").strip()
     quiz_id = (request.GET.get("quiz") or "").strip()
     sort = (request.GET.get("sort") or "-started_at").strip()
 
-    qs = Attempt.objects.select_related("participant", "quiz")
+    fr = (request.GET.get("fr") or "").strip()
+    dom = (request.GET.get("domain") or "").strip()
+
+    min_score_raw = (request.GET.get("min_score") or "").strip()
+    from_raw = (request.GET.get("from") or "").strip()
+    to_raw = (request.GET.get("to") or "").strip()
 
     if q:
         qs = qs.filter(Q(participant__national_id__icontains=q) | Q(participant__full_name__icontains=q))
@@ -521,11 +654,58 @@ def staff_manage_view(request: HttpRequest) -> HttpResponse:
     if quiz_id:
         qs = qs.filter(quiz_id=quiz_id)
 
+    if fr in {"normal", "timeout", "forced"}:
+        qs = qs.filter(is_finished=True, finished_reason=fr)
+
+    if dom in VALID_DOMAINS:
+        qs = qs.filter(domain=dom)
+
+    if min_score_raw:
+        try:
+            ms = int(min_score_raw)
+            qs = qs.filter(score__gte=ms)
+        except Exception:
+            pass
+
+    d_from = _parse_date_yyyy_mm_dd(from_raw)
+    d_to = _parse_date_yyyy_mm_dd(to_raw)
+
+    tz = timezone.get_current_timezone()
+    if d_from:
+        start = timezone.make_aware(datetime(d_from.year, d_from.month, d_from.day, 0, 0, 0), tz)
+        qs = qs.filter(started_at__gte=start)
+
+    if d_to:
+        end = timezone.make_aware(datetime(d_to.year, d_to.month, d_to.day, 23, 59, 59), tz)
+        qs = qs.filter(started_at__lte=end)
+
     if sort not in {"-started_at", "started_at", "-score", "score"}:
         sort = "-started_at"
+
     qs = qs.order_by(sort)
 
-    # KPIs
+    filters = {
+        "q": q,
+        "status": status,
+        "quiz": quiz_id,
+        "sort": sort,
+        "fr": fr,
+        "domain": dom,
+        "min_score": min_score_raw,
+        "from": from_raw,
+        "to": to_raw,
+    }
+    return qs, filters
+
+
+# ======================================================
+# Staff - Dashboard
+# ======================================================
+@staff_member_required
+def staff_manage_view(request: HttpRequest) -> HttpResponse:
+    base = Attempt.objects.select_related("participant", "quiz")
+    qs, filters = _apply_attempt_filters(request, base)
+
     kpi_total = qs.count()
     kpi_finished = qs.filter(is_finished=True).count()
     kpi_running = qs.filter(is_finished=False).count()
@@ -543,14 +723,14 @@ def staff_manage_view(request: HttpRequest) -> HttpResponse:
         {
             "attempts": page_obj,
             "quizzes": quizzes,
-            "filters": {"q": q, "status": status, "quiz": quiz_id, "sort": sort},
+            "filters": filters,
             "kpi": {"total": kpi_total, "finished": kpi_finished, "running": kpi_running, "avg_score": kpi_avg},
         },
     )
 
 
 # ======================================================
-# Staff - Import Participants (with domain)
+# Staff - Import Participants
 # ======================================================
 @staff_member_required
 @transaction.atomic
@@ -587,14 +767,14 @@ def staff_import_participants_view(request: HttpRequest) -> HttpResponse:
             return redirect("quiz:staff_import_participants")
 
         idx = {h: headers.index(h) for h in need}
-        ix_allowed = headers.index("is_allowed") if "is_allowed" in headers else None
-        ix_taken = headers.index("has_taken_exam") if "has_taken_exam" in headers else None
+        ix_person_allowed = headers.index("person_allowed") if "person_allowed" in headers else None
+        ix_enroll_allowed = headers.index("is_allowed") if "is_allowed" in headers else None
 
         if replace:
-            Participant.objects.all().update(is_allowed=False)
+            Enrollment.objects.all().update(is_allowed=False)
 
-        created = updated = skipped = 0
-        valid_domains = {c[0] for c in Participant._meta.get_field("domain").choices}
+        created_people = updated_people = created_enroll = updated_enroll = skipped = 0
+        touched_participant_ids: set[int] = set()
 
         for r in rows[1:]:
             national_id = _digits_only(_cell_to_str(r[idx["national_id"]]))
@@ -608,34 +788,53 @@ def staff_import_participants_view(request: HttpRequest) -> HttpResponse:
             if phone_last4 and (not phone_last4.isdigit() or len(phone_last4) != 4):
                 skipped += 1
                 continue
-            if domain not in valid_domains:
+            if domain not in VALID_DOMAINS:
                 skipped += 1
                 continue
 
-            is_allowed = True if replace else _to_bool(r[ix_allowed] if ix_allowed is not None else None, True)
-            has_taken_exam = False if reset_taken else _to_bool(r[ix_taken] if ix_taken is not None else None, False)
-
-            _, was_created = Participant.objects.update_or_create(
-                national_id=national_id,
-                defaults={
-                    "full_name": full_name,
-                    "phone_last4": phone_last4,
-                    "domain": domain,
-                    "is_allowed": is_allowed,
-                    "has_taken_exam": has_taken_exam,
-                },
+            person_allowed = _to_bool(r[ix_person_allowed] if ix_person_allowed is not None else None, True)
+            enroll_allowed = True if replace else _to_bool(
+                r[ix_enroll_allowed] if ix_enroll_allowed is not None else None, True
             )
-            created += 1 if was_created else 0
-            updated += 0 if was_created else 1
 
-        messages.success(request, f"✅ تم استيراد المتقدمين: (جديد {created}) (تحديث {updated}) (تجاهل {skipped})")
+            p, p_created = Participant.objects.update_or_create(
+                national_id=national_id,
+                defaults={"full_name": full_name, "phone_last4": phone_last4, "is_allowed": person_allowed},
+            )
+            created_people += 1 if p_created else 0
+            updated_people += 0 if p_created else 1
+
+            e, e_created = Enrollment.objects.update_or_create(
+                participant=p,
+                domain=domain,
+                defaults={"is_allowed": enroll_allowed},
+            )
+            created_enroll += 1 if e_created else 0
+            updated_enroll += 0 if e_created else 1
+
+            touched_participant_ids.add(p.id)
+
+        if reset_taken and touched_participant_ids:
+            Participant.objects.filter(id__in=list(touched_participant_ids)).update(
+                has_taken_exam=False,
+                locked_domain="",
+                locked_at=None,
+            )
+
+        messages.success(
+            request,
+            "✅ تم الاستيراد بنجاح: "
+            f"(أشخاص جديد {created_people}) (تحديث أشخاص {updated_people}) "
+            f"(تسجيلات جديدة {created_enroll}) (تحديث تسجيلات {updated_enroll}) "
+            f"(تجاهل {skipped})"
+        )
         return redirect("quiz:staff_manage")
 
     return render(request, "quiz/staff_import_participants.html")
 
 
 # ======================================================
-# Staff - Import Questions (3 quizzes × 50) + Preview
+# Staff - Import Questions (3 sheets × 50)
 # ======================================================
 @dataclass
 class ImportedQuestion:
@@ -691,12 +890,11 @@ def _read_questions_sheet(ws: Worksheet) -> list[ImportedQuestion]:
     for i, q in enumerate(out, start=1):
         if not q.order:
             q.order = i
-
     return out
 
 
 def _get_or_create_domain_quiz(domain: str) -> Quiz:
-    title = _domain_label(domain)
+    title = domain_label(domain)
     quiz, _ = Quiz.objects.get_or_create(title=title, defaults={"is_active": True})
     if not quiz.is_active:
         quiz.is_active = True
@@ -735,9 +933,9 @@ def staff_import_questions_view(request: HttpRequest) -> HttpResponse:
                 messages.error(request, f"الشيت '{s}' لازم يكون {TOTAL_QUESTIONS} سؤال بالضبط. الحالي: {len(qs)}")
                 return redirect("quiz:staff_import_questions")
 
-            for q in qs:
-                if q.correct not in {"A", "B", "C", "D"}:
-                    messages.error(request, f"الشيت '{s}': correct لازم يكون A/B/C/D فقط (سؤال {q.order}).")
+            for qx in qs:
+                if qx.correct not in {"A", "B", "C", "D"}:
+                    messages.error(request, f"الشيت '{s}': correct لازم يكون A/B/C/D فقط (سؤال {qx.order}).")
                     return redirect("quiz:staff_import_questions")
 
             all_data[s] = qs
@@ -753,12 +951,12 @@ def staff_import_questions_view(request: HttpRequest) -> HttpResponse:
             quiz = _get_or_create_domain_quiz(domain)
             Question.objects.filter(quiz=quiz).delete()
 
-            for q in all_data[domain]:
-                qq = Question.objects.create(quiz=quiz, order=q.order, text=q.text)
-                Choice.objects.create(question=qq, text=q.a, is_correct=(q.correct == "A"))
-                Choice.objects.create(question=qq, text=q.b, is_correct=(q.correct == "B"))
-                Choice.objects.create(question=qq, text=q.c, is_correct=(q.correct == "C"))
-                Choice.objects.create(question=qq, text=q.d, is_correct=(q.correct == "D"))
+            for qx in all_data[domain]:
+                qq = Question.objects.create(quiz=quiz, order=qx.order, text=qx.text)
+                Choice.objects.create(question=qq, text=qx.a, is_correct=(qx.correct == "A"))
+                Choice.objects.create(question=qq, text=qx.b, is_correct=(qx.correct == "B"))
+                Choice.objects.create(question=qq, text=qx.c, is_correct=(qx.correct == "C"))
+                Choice.objects.create(question=qq, text=qx.d, is_correct=(qx.correct == "D"))
 
         messages.success(request, "✅ تم استيراد الأسئلة بنجاح (3 اختبارات × 50 سؤال).")
         return redirect("quiz:staff_manage")
@@ -771,32 +969,33 @@ def staff_import_questions_view(request: HttpRequest) -> HttpResponse:
 # ======================================================
 @staff_member_required
 def staff_export_csv_view(request: HttpRequest) -> HttpResponse:
-    q = (request.GET.get("q") or "").strip()
-    status = (request.GET.get("status") or "all").strip()
-    quiz_id = (request.GET.get("quiz") or "").strip()
-
-    qs = Attempt.objects.select_related("participant", "quiz")
-
-    if q:
-        qs = qs.filter(Q(participant__national_id__icontains=q) | Q(participant__full_name__icontains=q))
-    if status == "finished":
-        qs = qs.filter(is_finished=True)
-    elif status == "running":
-        qs = qs.filter(is_finished=False)
-    if quiz_id:
-        qs = qs.filter(quiz_id=quiz_id)
+    base = Attempt.objects.select_related("participant", "quiz")
+    qs, _filters = _apply_attempt_filters(request, base)
 
     buff = io.StringIO()
     w = csv.writer(buff)
-    w.writerow(["national_id", "full_name", "domain", "quiz", "score", "is_finished", "finished_reason",
-                "timed_out_count", "started_at", "finished_at", "ip"])
+    w.writerow(
+        [
+            "national_id",
+            "full_name",
+            "domain",
+            "quiz",
+            "score",
+            "is_finished",
+            "finished_reason",
+            "timed_out_count",
+            "started_at",
+            "finished_at",
+            "ip",
+        ]
+    )
 
     for a in qs.order_by("-started_at"):
         w.writerow(
             [
                 a.participant.national_id,
                 a.participant.full_name,
-                a.participant.domain,
+                a.domain,
                 a.quiz.title,
                 a.score,
                 "1" if a.is_finished else "0",
@@ -815,8 +1014,133 @@ def staff_export_csv_view(request: HttpRequest) -> HttpResponse:
 
 @staff_member_required
 def staff_export_xlsx_view(request: HttpRequest) -> HttpResponse:
-    # تبسيط: نفس CSV. إذا تبي XLSX حقيقي أبنيه لك فوراً.
-    return staff_export_csv_view(request)
+    """
+    XLSX فعلي (openpyxl) مع RTL + Freeze + AutoFilter + تنسيق.
+    """
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    from openpyxl.utils import get_column_letter
+
+    base = Attempt.objects.select_related("participant", "quiz")
+    qs, _filters = _apply_attempt_filters(request, base)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Attempts"
+    ws.sheet_view.rightToLeft = True
+
+    headers = [
+        "رقم الهوية/السجل",
+        "الاسم",
+        "المجال",
+        "الاختبار",
+        "الدرجة",
+        "منتهٍ؟",
+        "سبب الإنهاء",
+        "عدد انتهاء الوقت",
+        "وقت البدء",
+        "وقت الانتهاء",
+        "IP",
+    ]
+    ws.append(headers)
+
+    header_font = Font(bold=True, size=12, color="FFFFFF")
+    header_fill = PatternFill("solid", fgColor="0EA5E9")
+    thin = Side(style="thin", color="CBD5E1")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    head_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    cell_align = Alignment(horizontal="right", vertical="center", wrap_text=True)
+
+    for col in range(1, len(headers) + 1):
+        c = ws.cell(row=1, column=col)
+        c.font = header_font
+        c.fill = header_fill
+        c.alignment = head_align
+        c.border = border
+
+    def _reason_label(r: str) -> str:
+        return {"normal": "طبيعي", "timeout": "تلقائي", "forced": "إداري"}.get(r or "", r or "")
+
+    for a in qs.order_by("-started_at"):
+        ws.append(
+            [
+                a.participant.national_id,
+                a.participant.full_name,
+                domain_label(a.domain),
+                a.quiz.title,
+                int(a.score or 0),
+                "نعم" if a.is_finished else "لا",
+                _reason_label(a.finished_reason),
+                int(a.timed_out_count or 0),
+                timezone.localtime(a.started_at).strftime("%Y-%m-%d %H:%M:%S") if a.started_at else "",
+                timezone.localtime(a.finished_at).strftime("%Y-%m-%d %H:%M:%S") if a.finished_at else "",
+                a.started_ip or "",
+            ]
+        )
+
+    max_row = ws.max_row
+    max_col = ws.max_column
+    for r in range(2, max_row + 1):
+        for c in range(1, max_col + 1):
+            cell = ws.cell(row=r, column=c)
+            cell.alignment = cell_align
+            cell.border = border
+
+    widths = {1: 18, 2: 30, 3: 14, 4: 18, 5: 10, 6: 10, 7: 14, 8: 14, 9: 20, 10: 20, 11: 16}
+    for i in range(1, max_col + 1):
+        ws.column_dimensions[get_column_letter(i)].width = widths.get(i, 16)
+
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = f"A1:{get_column_letter(max_col)}{max_row}"
+
+    out = io.BytesIO()
+    wb.save(out)
+    out.seek(0)
+
+    resp = HttpResponse(
+        out.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    resp["Content-Disposition"] = 'attachment; filename="attempts.xlsx"'
+    return resp
+
+
+# ======================================================
+# Staff - Confirm pages (GET)
+# ======================================================
+@staff_member_required
+@require_http_methods(["GET"])
+def staff_attempt_finish_confirm_view(request: HttpRequest, attempt_id: int) -> HttpResponse:
+    attempt = get_object_or_404(Attempt.objects.select_related("participant", "quiz"), id=attempt_id)
+    return render(
+        request,
+        "quiz/staff_attempt_confirm.html",
+        {
+            "attempt": attempt,
+            "title": "تأكيد إنهاء المحاولة",
+            "message": "هل أنت متأكد أنك تريد إنهاء هذه المحاولة؟ سيتم اعتبارها منتهية (إغلاق إداري).",
+            "action_url_name": "quiz:staff_attempt_force_finish",
+            "action_btn": "نعم، إنهاء المحاولة",
+        },
+    )
+
+
+@staff_member_required
+@require_http_methods(["GET"])
+def staff_attempt_reset_confirm_view(request: HttpRequest, attempt_id: int) -> HttpResponse:
+    attempt = get_object_or_404(Attempt.objects.select_related("participant", "quiz"), id=attempt_id)
+    return render(
+        request,
+        "quiz/staff_attempt_confirm.html",
+        {
+            "attempt": attempt,
+            "title": "تأكيد إعادة فتح الاختبار",
+            "message": "هل أنت متأكد؟ سيتم حذف المحاولة وإزالة القفل عن المشارك ليتمكن من دخول اختبار جديد.",
+            "action_url_name": "quiz:staff_attempt_reset",
+            "action_btn": "نعم، إعادة فتح الاختبار",
+        },
+    )
 
 
 # ======================================================
@@ -825,12 +1149,13 @@ def staff_export_xlsx_view(request: HttpRequest) -> HttpResponse:
 @staff_member_required
 def staff_attempt_detail_view(request: HttpRequest, attempt_id: int) -> HttpResponse:
     attempt = get_object_or_404(Attempt.objects.select_related("participant", "quiz"), id=attempt_id)
-    answers = list(
-        Answer.objects.filter(attempt=attempt)
-        .select_related("question", "selected_choice")
-        .order_by("id")
-    )
-    return render(request, "quiz/staff_attempt_detail.html", {"attempt": attempt, "answers": answers})
+    answers = list(Answer.objects.filter(attempt=attempt).select_related("question", "selected_choice").order_by("id"))
+    ctx = {"attempt": attempt, "answers": answers}
+
+    if request.GET.get("partial") == "1":
+        return render(request, "quiz/partials/attempt_detail_panel.html", ctx)
+
+    return render(request, "quiz/staff_attempt_detail.html", ctx)
 
 
 @staff_member_required
@@ -838,7 +1163,6 @@ def staff_attempt_detail_view(request: HttpRequest, attempt_id: int) -> HttpResp
 def staff_force_finish_attempt_view(request: HttpRequest, attempt_id: int) -> HttpResponse:
     attempt = get_object_or_404(Attempt, id=attempt_id)
     _finish_attempt(attempt, reason="forced")
-    Participant.objects.filter(id=attempt.participant_id).update(has_taken_exam=True)
     messages.success(request, "✅ تم إنهاء المحاولة (إغلاق إداري).")
     return redirect("quiz:staff_manage")
 
@@ -846,10 +1170,19 @@ def staff_force_finish_attempt_view(request: HttpRequest, attempt_id: int) -> Ht
 @staff_member_required
 @require_POST
 def staff_reset_attempt_view(request: HttpRequest, attempt_id: int) -> HttpResponse:
+    """
+    إعادة فتح: حذف المحاولة + إزالة القفل عن المشارك.
+    """
     attempt = get_object_or_404(Attempt, id=attempt_id)
     pid = attempt.participant_id
+
     Answer.objects.filter(attempt=attempt).delete()
     attempt.delete()
-    Participant.objects.filter(id=pid).update(has_taken_exam=False)
-    messages.success(request, "✅ تم إعادة فتح الاختبار (حذف المحاولة).")
+
+    Participant.objects.filter(id=pid).update(
+        has_taken_exam=False,
+        locked_domain="",
+        locked_at=None,
+    )
+    messages.success(request, "✅ تم إعادة فتح الاختبار (حذف المحاولة + إزالة القفل).")
     return redirect("quiz:staff_manage")

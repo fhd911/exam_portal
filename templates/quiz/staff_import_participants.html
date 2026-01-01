@@ -1,14 +1,16 @@
-{# ==========================================================
-   templates/quiz/staff_import_participants.html (استبدله بالكامل)
-   ========================================================== #}
 {% extends "quiz/base.html" %}
+{% comment %}
+templates/quiz/staff_import_participants.html
+{% endcomment %}
 {% block title %}استيراد المتقدمين{% endblock %}
 
 {% block extra_head %}
 <style>
+  .shell{max-width:1100px;margin:0 auto;}
   .head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
-  .sub{margin-top:6px;line-height:1.9}
-  .tabs{display:flex;gap:8px;flex-wrap:wrap;}
+  .sub{margin-top:6px;line-height:1.95}
+
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
   .tab{
     display:inline-flex;align-items:center;gap:8px;
     padding:9px 12px;border-radius:999px;
@@ -16,12 +18,27 @@
     background:rgba(255,255,255,.92);
     color:var(--ink);text-decoration:none;font-weight:900;font-size:12px;
     box-shadow: 0 8px 18px rgba(2,44,34,.06);
+    transition: transform .12s ease, background .12s ease;
   }
-  .tab.primary{background: linear-gradient(135deg, rgba(14,165,164,.95), rgba(16,185,129,.95));color:#fff;border-color: rgba(14,165,164,.25);}
-  .glass{background:rgba(255,255,255,.78);border:1px solid rgba(231,238,246,.95);border-radius:22px;box-shadow: var(--shadow2);}
-  .wrap{padding:14px;}
+  .tab:hover{transform: translateY(-1px); background:rgba(14,165,164,.04)}
+  .tab.primary{
+    background: linear-gradient(135deg, rgba(14,165,164,.95), rgba(16,185,129,.95));
+    color:#fff;border-color: rgba(14,165,164,.25);
+  }
+
+  .glass{
+    background:rgba(255,255,255,.78);
+    border:1px solid rgba(231,238,246,.95);
+    border-radius:22px;
+    box-shadow: var(--shadow2);
+  }
+  .pad{padding:14px}
+  .grid{display:grid;grid-template-columns: 1.2fr .8fr;gap:12px;align-items:start;}
+  @media (max-width: 980px){ .grid{grid-template-columns:1fr;} }
+
   .lbl{display:block;margin-bottom:6px;font-weight:900;color:var(--mut);font-size:12.2px;}
   .hint{color:var(--mut);font-size:12.3px;line-height:1.9}
+
   .note{
     padding:10px 12px;border-radius:16px;
     border:1px solid rgba(231,238,246,.95);
@@ -29,102 +46,238 @@
     box-shadow: 0 10px 22px rgba(2,44,34,.05);
     font-weight:900;font-size:12.5px;line-height:1.9;
   }
-  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+
+  .pill{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:5px 10px;border-radius:999px;
+    font-size:11.5px;font-weight:900;
+    border:1px solid rgba(231,238,246,.95);
+    background:#fff;color:var(--mut)
+  }
+
+  .row{display:grid;grid-template-columns: 1fr 1fr;gap:10px;}
+  @media (max-width: 720px){ .row{grid-template-columns:1fr;} }
+
+  input[type="text"], input[type="file"]{
+    width:100%;
+    padding:10px 12px;
+    border-radius:14px;
+    border:1px solid rgba(231,238,246,.95);
+    background:#fff;
+    font-weight:800;
+    outline:none;
+  }
+  input[type="text"]:focus, input[type="file"]:focus{
+    border-color: rgba(14,165,164,.45);
+    box-shadow: 0 0 0 4px rgba(14,165,164,.08);
+  }
+
+  .check{
+    display:flex;gap:10px;align-items:flex-start;
+    font-weight:900;line-height:1.9;margin-top:10px;
+    padding:8px 10px;border-radius:14px;
+    border:1px solid rgba(231,238,246,.95);
+    background:rgba(255,255,255,.86);
+  }
+  .check input{margin-top:4px}
+
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
   .btn.soft{background:#fff;color:var(--ink);border:1px solid rgba(231,238,246,.95);box-shadow:none;}
   .btn.soft:hover{background:rgba(14,165,164,.04);}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;}
-  @media (max-width: 980px){ .grid{grid-template-columns:1fr;} }
-  .pill{
-    display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border-radius:999px;
-    font-size:11.5px;font-weight:900;border:1px solid rgba(231,238,246,.95);background:#fff;color:var(--mut)
+
+  /* messages inline (اختياري لو تحب تظهرها داخل الصفحة أيضًا) */
+  .msgs{display:grid;gap:8px;margin-bottom:12px}
+  .msg{
+    display:flex;gap:10px;align-items:flex-start;
+    padding:10px 12px;border-radius:16px;
+    border:1px solid rgba(231,238,246,.95);
+    background:rgba(255,255,255,.92);
+    box-shadow: 0 10px 22px rgba(2,44,34,.05);
+    font-weight:900;font-size:12.7px;line-height:1.9;
   }
-  .check{display:flex;gap:8px;align-items:flex-start;font-weight:900;line-height:1.9;margin-top:8px;}
+  .msg .ic{
+    width:28px;height:28px;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:14px;flex:0 0 auto;
+    background:rgba(14,165,164,.10);
+    border:1px solid rgba(14,165,164,.18);
+  }
+
+  .kpi{
+    display:grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap:10px;
+    margin-top:12px;
+  }
+  @media (max-width: 720px){ .kpi{grid-template-columns:1fr;} }
+  .k{
+    padding:10px 12px;border-radius:18px;
+    border:1px solid rgba(231,238,246,.95);
+    background:rgba(255,255,255,.92);
+  }
+  .k .t{font-size:12px;color:var(--mut);font-weight:900}
+  .k .v{margin-top:4px;font-size:18px;font-weight:1000;color:var(--ink)}
+  code{background:rgba(15,23,42,.06);padding:2px 6px;border-radius:10px;font-weight:900}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="card">
-  <div class="head">
-    <div>
-      <h2 style="margin:0">استيراد المتقدمين</h2>
-      <div class="mut sub">
-        يستورد بيانات المرشح إلى جدول <b>Participant</b>:
-        (رقم الهوية + الاسم + آخر 4 أرقام + المجال domain)
+<div class="shell">
+
+  <div class="card">
+    <div class="head">
+      <div>
+        <h2 style="margin:0">استيراد المتقدمين</h2>
+        <div class="mut sub">
+          يستورد بيانات المرشح إلى جدول <b>Participant</b>:
+          <span class="pill">national_id</span>
+          <span class="pill">full_name</span>
+          <span class="pill">phone_last4</span>
+          <span class="pill">domain</span>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <a class="tab" href="{% url 'quiz:staff_manage' %}">لوحة الإدارة</a>
+        <a class="tab" href="{% url 'quiz:staff_import_questions' %}">استيراد الأسئلة</a>
+        <a class="tab primary" href="{% url 'quiz:staff_import_participants' %}">استيراد المتقدمين</a>
       </div>
     </div>
 
-    <div class="tabs">
-      <a class="tab" href="{% url 'quiz:staff_manage' %}">لوحة الإدارة</a>
-      <a class="tab" href="{% url 'quiz:staff_import_questions' %}">استيراد الأسئلة</a>
-      <a class="tab primary" href="{% url 'quiz:staff_import_participants' %}">استيراد المتقدمين</a>
-    </div>
-  </div>
-
-  <div class="glass wrap">
-    <div class="grid">
-      <div>
-        <div class="note">
-          ✅ الأعمدة المطلوبة في Excel (لازم نفس الأسماء):
-          <div class="mut" style="margin-top:6px">
-            <b>national_id</b>, <b>full_name</b>, <b>phone_last4</b>, <b>domain</b><br>
-            domain يقبل عربي/إنجليزي وسيتم تحويله داخليًا إلى:
-            <b>deputy</b> / <b>counselor</b> / <b>activity</b>
+    {# ✅ (اختياري) رسائل داخل الصفحة - لو ما تبيها احذف هذا البلوك لأن عندك Toast في base.html #}
+    {% if messages %}
+      <div class="msgs">
+        {% for message in messages %}
+          <div class="msg">
+            <div class="ic">✓</div>
+            <div>{{ message }}</div>
           </div>
-        </div>
+        {% endfor %}
+      </div>
+    {% endif %}
 
-        <form method="post" enctype="multipart/form-data" style="margin-top:12px" class="glass">
-          {% csrf_token %}
-          <div style="padding:12px">
-            <label class="lbl">ملف المتقدمين (Excel .xlsx)</label>
-            <input type="file" name="file" accept=".xlsx" required>
+    <div class="glass pad">
+      <div class="grid">
 
-            <div style="height:10px"></div>
-
-            <label class="lbl">اسم الشيت داخل الملف</label>
-            <input name="sheet_name" value="participants" placeholder="participants">
-
-            <label class="check">
-              <input type="checkbox" name="replace" value="1">
-              <span>Replace: يجعل الجميع <b>غير مسموحين</b> ثم يفعّل فقط الموجودين في الملف.</span>
-            </label>
-
-            <label class="check">
-              <input type="checkbox" name="reset_taken" value="1">
-              <span>تصفير <b>has_taken_exam</b> للمستورَدين (إعادة فتح الاختبار لهم).</span>
-            </label>
-
-            <div class="actions">
-              <button class="btn" type="submit">استيراد</button>
-              <a class="btn soft" href="{% url 'quiz:staff_manage' %}">رجوع</a>
-            </div>
-
-            <div class="hint" style="margin-top:10px">
-              يقبل domain مثل: (وكيل/موجه طلابي/رائد نشاط) أو (deputy/counselor/activity) أو (guidance → counselor).
+        <!-- ================= Left: Form ================= -->
+        <div>
+          <div class="note">
+            ✅ الأعمدة المطلوبة في Excel (لازم نفس الأسماء تمامًا):
+            <div class="mut" style="margin-top:6px">
+              <code>national_id</code>, <code>full_name</code>, <code>phone_last4</code>, <code>domain</code><br>
+              domain يقبل عربي/إنجليزي وسيتم تحويله داخليًا إلى:
+              <b>deputy</b> / <b>counselor</b> / <b>activity</b>
             </div>
           </div>
-        </form>
-      </div>
 
-      <div>
-        <div class="note">
-          🔒 قواعد التحقق
-          <div class="mut" style="margin-top:6px;line-height:1.9">
-            • phone_last4 إذا موجود لازم 4 أرقام<br>
-            • domain لازم يتحول لأحد الثلاثة<br>
-            • أي صف غير مطابق يُحسب ضمن skipped
-          </div>
+          <form method="post" enctype="multipart/form-data" style="margin-top:12px" class="glass">
+            {% csrf_token %}
+            <div class="pad">
+
+              <label class="lbl">ملف المتقدمين (Excel .xlsx)</label>
+              <input type="file" name="file" accept=".xlsx" required>
+
+              <div style="height:10px"></div>
+
+              <div class="row">
+                <div>
+                  <label class="lbl">اسم الشيت داخل الملف</label>
+                  <input type="text" name="sheet_name" value="participants" placeholder="participants">
+                  <div class="hint" style="margin-top:6px">
+                    إذا تركته فارغًا، سيحاول النظام استخدام أول Sheet (حسب كود الـ view لديك).
+                  </div>
+                </div>
+
+                <div>
+                  <label class="lbl">أمثلة domain</label>
+                  <div class="note" style="font-weight:900">
+                    وكيل / deputy<br>
+                    موجه طلابي / guidance / counselor<br>
+                    رائد نشاط / activity
+                  </div>
+                </div>
+              </div>
+
+              <label class="check">
+                <input type="checkbox" name="replace" value="1">
+                <span>
+                  <b>Replace</b>: يجعل الجميع <b>غير مسموحين</b> ثم يفعّل فقط الموجودين في الملف.
+                </span>
+              </label>
+
+              <label class="check">
+                <input type="checkbox" name="reset_taken" value="1">
+                <span>
+                  تصفير <b>has_taken_exam</b> للمستورَدين (إعادة فتح الاختبار لهم).
+                </span>
+              </label>
+
+              <div class="actions">
+                <button class="btn" type="submit">استيراد</button>
+                <a class="btn soft" href="{% url 'quiz:staff_manage' %}">رجوع</a>
+              </div>
+
+              <div class="hint" style="margin-top:10px">
+                يقبل domain مثل: (وكيل/موجه طلابي/رائد نشاط) أو (deputy/counselor/activity) أو (guidance → counselor).
+              </div>
+
+            </div>
+          </form>
+
+          {# ✅ ملخص أرقام لو الـ view يرسلها (اختياري) #}
+          {% if imported_count or updated_count or skipped_count %}
+            <div class="kpi">
+              <div class="k">
+                <div class="t">Imported</div>
+                <div class="v">{{ imported_count|default:0 }}</div>
+              </div>
+              <div class="k">
+                <div class="t">Updated</div>
+                <div class="v">{{ updated_count|default:0 }}</div>
+              </div>
+              <div class="k">
+                <div class="t">Skipped</div>
+                <div class="v">{{ skipped_count|default:0 }}</div>
+              </div>
+            </div>
+          {% endif %}
         </div>
 
-        <div class="glass" style="padding:12px;margin-top:12px">
-          <div class="pill">أمثلة domain</div>
-          <div class="mut" style="margin-top:6px;line-height:1.9">
-            وكيل / deputy<br>
-            موجه طلابي / guidance / counselor<br>
-            رائد نشاط / activity
+        <!-- ================= Right: Rules ================= -->
+        <div>
+          <div class="note">
+            🔒 قواعد التحقق
+            <div class="mut" style="margin-top:6px;line-height:1.9">
+              • <b>phone_last4</b> إذا موجود لازم 4 أرقام<br>
+              • <b>domain</b> لازم يتحول لأحد الثلاثة (deputy / counselor / activity)<br>
+              • أي صف غير مطابق يُحسب ضمن <b>skipped</b>
+            </div>
           </div>
+
+          <div class="glass" style="padding:12px;margin-top:12px">
+            <div class="pill">ملاحظات مهمة</div>
+            <div class="mut" style="margin-top:6px;line-height:1.9">
+              • تأكد أن أسماء الأعمدة هي نفسها تمامًا (lowercase).<br>
+              • لو فيه مسافات في بداية/نهاية الخلايا، الأفضل تنظيف الملف قبل الرفع.<br>
+              • رقم الهوية يُفضّل كنص داخل Excel لتجنب التحويل العلمي.
+            </div>
+          </div>
+
+          <div class="glass" style="padding:12px;margin-top:12px">
+            <div class="pill">الأعمدة</div>
+            <div class="mut" style="margin-top:6px;line-height:1.9">
+              <code>national_id</code><br>
+              <code>full_name</code><br>
+              <code>phone_last4</code><br>
+              <code>domain</code>
+            </div>
+          </div>
+
         </div>
+
       </div>
     </div>
+
   </div>
 </div>
 {% endblock %}

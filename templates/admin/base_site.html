@@ -1,14 +1,14 @@
 {% extends "admin/base.html" %}
-{% load static %}
+{% load static i18n %}
 
 {# =========================
-   Branding (عنوان لوحة الإدارة)
+   Title / Branding
    ========================= #}
 {% block title %}لوحة الإدارة | {{ site_title|default:_('Django site admin') }}{% endblock %}
 
 {% block branding %}
   <h1 id="site-name" style="margin:0;">
-    <a href="{% url 'admin:index' %}" style="display:inline-flex;align-items:center;gap:10px;">
+    <a href="{% url 'admin:index' %}" style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;">
       <span style="font-weight:900;">لوحة إدارة نظام الاختبارات</span>
     </a>
   </h1>
@@ -17,7 +17,7 @@
 {% block nav-global %}{% endblock %}
 
 {# =========================
-   Extra Head (RTL + Cairo + تحسينات)
+   Extra Head (RTL + Cairo + UI + Scroll Fix)
    ========================= #}
 {% block extrahead %}
   {{ block.super }}
@@ -30,31 +30,51 @@
   <style>
     :root{
       --ff:"Cairo",system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;
+      --shadow: 0 10px 26px rgba(2,44,34,.08);
+      --radius: 16px;
     }
 
+    /* =========================
+       ✅ Scroll Fix (الأهم)
+       ========================= */
     html, body{
+      height: auto !important;
+      min-height: 100% !important;
+      overflow: auto !important;
       font-family: var(--ff) !important;
     }
 
-    /* RTL */
+    #container, #content, #content-main, #content-related{
+      height: auto !important;
+      min-height: 0 !important;
+      overflow: visible !important;
+    }
+
+    /* صفحات changelist أحياناً تنحبس داخل wrapper */
+    .change-list #content,
+    .change-form #content{
+      overflow: visible !important;
+    }
+
+    /* =========================
+       RTL
+       ========================= */
     body{
       direction: rtl;
       text-align: right;
     }
-
-    /* إصلاحات RTL لعناصر Django admin */
     #container, #content, #content-main, #content-related{
       text-align: right;
     }
-
-    /* عكس الـ breadcrumbs */
     .breadcrumbs{
       direction: rtl;
       text-align: right;
     }
     .breadcrumbs a{ font-weight:900; }
 
-    /* تحسين الهيدر */
+    /* =========================
+       Header
+       ========================= */
     #header{
       background: linear-gradient(135deg, #0ea5e9, #22c55e);
       color:#fff;
@@ -65,44 +85,70 @@
       font-weight:900;
     }
 
-    /* تحسين البحث العلوي */
+    /* =========================
+       Toolbar
+       ========================= */
     #toolbar{
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 10px 26px rgba(2,44,34,.08);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: visible; /* ✅ لا تقفل السكرول */
     }
 
-    /* تحسين البطاقات/الموديولات */
+    /* =========================
+       Modules / Cards
+       ⚠️ لا تستخدم overflow:hidden على .module لأنه يحبس التمرير
+       ========================= */
     .module,
-    .app-quiz,
     .dashboard #content-main .module{
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 10px 26px rgba(2,44,34,.08);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: visible; /* ✅ */
     }
 
-    /* تحسين الجداول */
+    /* =========================
+       Tables (القص داخل الجدول فقط)
+       ========================= */
+    #changelist{
+      overflow: visible;
+    }
     #changelist table{
       border-radius: 14px;
-      overflow: hidden;
+      overflow: hidden; /* ✅ هنا فقط */
     }
     #changelist table thead th,
     #changelist table tbody td{
       text-align: right;
     }
 
-    /* تحسين الأزرار */
+    /* =========================
+       Buttons
+       ========================= */
     a.button,
     input[type=submit],
-    .submit-row input{
+    .submit-row input,
+    .object-tools a{
       border-radius: 12px !important;
       font-weight: 900 !important;
     }
 
-    /* تحسين رسائل النظام */
+    /* =========================
+       Messages
+       ========================= */
     ul.messagelist li{
       border-radius: 14px;
       font-weight: 900;
+    }
+
+    /* =========================
+       Small RTL touches
+       ========================= */
+    .aligned label{
+      float: right;
+      padding-left: 0;
+      padding-right: 10px;
+    }
+    .aligned .form-row{
+      text-align: right;
     }
   </style>
 {% endblock %}
