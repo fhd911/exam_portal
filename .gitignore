@@ -31,3 +31,6 @@ staticfiles/
 
 # Backup files
 *.bak
+
+# Generated admin static
+quiz/static/admin/
