@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from django.contrib import admin, messages
+from django.core.exceptions import FieldError
 from django.db.models import Count, Q
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -10,6 +11,14 @@ from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 
 from .models import Answer, Attempt, Choice, Enrollment, ExamWindow, Participant, Question, Quiz
+
+
+# ======================================================
+# Admin styling (font + sizes)
+# ======================================================
+class AdminStylingMixin:
+    class Media:
+        css = {"all": ("admin/custom_admin.css",)}
 
 
 # ======================================================
@@ -103,7 +112,7 @@ class ExamWindowNowFilter(admin.SimpleListFilter):
 # Admins
 # ======================================================
 @admin.register(Quiz)
-class QuizAdmin(admin.ModelAdmin):
+class QuizAdmin(AdminStylingMixin, admin.ModelAdmin):
     list_display = ("id", "title", "is_active", "per_question_seconds", "created_at")
     list_filter = ("is_active",)
     search_fields = ("title",)
@@ -112,7 +121,7 @@ class QuizAdmin(admin.ModelAdmin):
 
 
 @admin.register(Question)
-class QuestionAdmin(admin.ModelAdmin):
+class QuestionAdmin(AdminStylingMixin, admin.ModelAdmin):
     list_display = ("id", "quiz", "order", "short_text")
     list_filter = ("quiz",)
     search_fields = ("text", "quiz__title")
@@ -126,7 +135,7 @@ class QuestionAdmin(admin.ModelAdmin):
 
 
 @admin.register(Choice)
-class ChoiceAdmin(admin.ModelAdmin):
+class ChoiceAdmin(AdminStylingMixin, admin.ModelAdmin):
     list_display = ("id", "question", "is_correct", "text")
     list_filter = ("is_correct", "question__quiz")
     search_fields = ("text", "question__text", "question__quiz__title")
@@ -135,7 +144,7 @@ class ChoiceAdmin(admin.ModelAdmin):
 
 
 @admin.register(Enrollment)
-class EnrollmentAdmin(admin.ModelAdmin):
+class EnrollmentAdmin(AdminStylingMixin, admin.ModelAdmin):
     list_display = ("id", "participant_link", "domain_badge", "is_allowed", "created_at")
     list_filter = ("domain", "is_allowed")
     search_fields = ("participant__national_id", "participant__full_name")
@@ -155,7 +164,7 @@ class EnrollmentAdmin(admin.ModelAdmin):
 
 
 @admin.register(ExamWindow)
-class ExamWindowAdmin(admin.ModelAdmin):
+class ExamWindowAdmin(AdminStylingMixin, admin.ModelAdmin):
     list_display = ("id", "name_or_domain", "domain_badge", "starts_at", "ends_at", "is_active")
     list_filter = ("domain", "is_active", ExamWindowNowFilter)
     search_fields = ("name",)
@@ -174,7 +183,7 @@ class ExamWindowAdmin(admin.ModelAdmin):
 
 
 @admin.register(Participant)
-class ParticipantAdmin(admin.ModelAdmin):
+class ParticipantAdmin(AdminStylingMixin, admin.ModelAdmin):
     """
     ✅ Participant يمثل الشخص
     ✅ المجالات المسجل بها عبر Enrollment
@@ -205,7 +214,7 @@ class ParticipantAdmin(admin.ModelAdmin):
             return _pill("—", "#f1f5f9", "#334155")
 
         pills = [_domain_pill(d) for d in sorted(set(domains))]
-        inner = format_html_join(" ", "{}", ((p,) for p in pills))  # ✅ بدون خطأ args/kwargs
+        inner = format_html_join(" ", "{}", ((p,) for p in pills))
         return format_html('<div style="display:flex;gap:6px;flex-wrap:wrap;">{}</div>', inner)
 
     @admin.display(description="المجال المقفول")
@@ -219,7 +228,7 @@ class ParticipantAdmin(admin.ModelAdmin):
 
 
 @admin.register(Attempt)
-class AttemptAdmin(admin.ModelAdmin):
+class AttemptAdmin(AdminStylingMixin, admin.ModelAdmin):
     list_display = (
         "id",
         "participant_link",
@@ -262,16 +271,21 @@ class AttemptAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request: HttpRequest):
         qs = super().get_queryset(request).select_related("participant", "quiz")
-        qs = qs.annotate(
-            answered_done=Count("answers", filter=Q(answers__answered_at__isnull=False), distinct=True),
-            # ✅ Quiz -> Question (related_query_name الافتراضي = question)
-            total_questions=Count("quiz__question", distinct=True),
-        )
-        return qs
 
-    # -------------------------
-    # Badges / Columns
-    # -------------------------
+        qs = qs.annotate(
+            answered_done=Count(
+                "answers",
+                filter=Q(answers__answered_at__isnull=False),
+                distinct=True,
+            )
+        )
+
+        # total_questions: يعتمد على related_name / related_query_name لعلاقة Question->Quiz
+        try:
+            return qs.annotate(total_questions=Count("quiz__questions", distinct=True))
+        except FieldError:
+            return qs.annotate(total_questions=Count("quiz__question", distinct=True))
+
     @admin.display(description="المرشح")
     def participant_link(self, obj: Attempt) -> str:
         url = reverse("admin:quiz_participant_change", args=[obj.participant_id])
@@ -316,9 +330,6 @@ class AttemptAdmin(admin.ModelAdmin):
         text = f"{done}/{total}"
         return _pill(text, "#dcfce7", "#166534") if obj.is_finished else _pill(text, "#e0f2fe", "#075985")
 
-    # -------------------------
-    # Tools
-    # -------------------------
     @admin.display(description="أدوات")
     def tools(self, obj: Attempt) -> str:
         confirm_finish_url = reverse("admin:quiz_attempt_confirm_finish", args=[obj.id])
@@ -344,9 +355,6 @@ class AttemptAdmin(admin.ModelAdmin):
 
         return format_html('<div style="display:flex;gap:6px;flex-wrap:wrap;">{} {}</div>', finish_btn, reset_btn)
 
-    # -------------------------
-    # Custom admin URLs
-    # -------------------------
     def get_urls(self):
         urls = super().get_urls()
         custom = [
@@ -450,6 +458,7 @@ class AttemptAdmin(admin.ModelAdmin):
 
         a = get_object_or_404(Attempt, id=attempt_id)
         pid = a.participant_id
+
         Answer.objects.filter(attempt=a).delete()
         a.delete()
 
@@ -468,17 +477,13 @@ class AttemptAdmin(admin.ModelAdmin):
         open_qs = queryset.filter(is_finished=False)
         updated = open_qs.count()
 
-        for a in open_qs:
-            a.is_finished = True
-            a.finished_at = now
-            a.finished_reason = "forced"
-            a.save(update_fields=["is_finished", "finished_at", "finished_reason"])
+        open_qs.update(is_finished=True, finished_at=now, finished_reason="forced")
 
         self.message_user(request, f"✅ تم إغلاق {updated} محاولة إداريًا.", level=messages.SUCCESS)
 
 
 @admin.register(Answer)
-class AnswerAdmin(admin.ModelAdmin):
+class AnswerAdmin(AdminStylingMixin, admin.ModelAdmin):
     list_display = ("id", "attempt", "question", "selected_choice", "started_at", "answered_at")
     list_filter = ("attempt__quiz", "attempt__is_finished")
     search_fields = (

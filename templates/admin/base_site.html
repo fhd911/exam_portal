@@ -1,14 +1,19 @@
+{# templates/admin/base_site.html #}
 {% extends "admin/base.html" %}
 {% load static i18n %}
 
 {# =========================
-   Title / Branding
+   Title
    ========================= #}
 {% block title %}لوحة الإدارة | {{ site_title|default:_('Django site admin') }}{% endblock %}
 
+{# =========================
+   Branding
+   ========================= #}
 {% block branding %}
   <h1 id="site-name" style="margin:0;">
-    <a href="{% url 'admin:index' %}" style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;">
+    <a href="{% url 'admin:index' %}"
+       style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;">
       <span style="font-weight:900;">لوحة إدارة نظام الاختبارات</span>
     </a>
   </h1>
@@ -22,61 +27,60 @@
 {% block extrahead %}
   {{ block.super }}
 
-  <!-- Cairo -->
+  {# Cairo (Google Fonts) #}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  {# Optional: your local admin css (if you created it) #}
+  {# <link rel="stylesheet" href="{% static 'admin/custom_admin.css' %}"> #}
 
   <style>
     :root{
       --ff:"Cairo",system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;
       --shadow: 0 10px 26px rgba(2,44,34,.08);
       --radius: 16px;
+      --grad: linear-gradient(135deg,#0ea5e9,#22c55e);
     }
 
     /* =========================
-       ✅ Scroll Fix (الأهم)
+       ✅ RTL + Base typography
+       ========================= */
+    html, body{ font-family: var(--ff) !important; }
+    body{ direction: rtl; text-align: right; }
+
+    #container, #content, #content-main, #content-related,
+    .breadcrumbs, .module, .form-row, fieldset, .aligned{
+      direction: rtl;
+      text-align: right;
+    }
+
+    /* =========================
+       ✅ Scroll Fix (no scroll lock)
        ========================= */
     html, body{
       height: auto !important;
       min-height: 100% !important;
       overflow: auto !important;
-      font-family: var(--ff) !important;
     }
 
+    /* بعض الثيمات/تعديلات الأدمن تحبس السكرول داخل wrappers */
     #container, #content, #content-main, #content-related{
       height: auto !important;
       min-height: 0 !important;
       overflow: visible !important;
     }
 
-    /* صفحات changelist أحياناً تنحبس داخل wrapper */
     .change-list #content,
     .change-form #content{
       overflow: visible !important;
     }
 
     /* =========================
-       RTL
-       ========================= */
-    body{
-      direction: rtl;
-      text-align: right;
-    }
-    #container, #content, #content-main, #content-related{
-      text-align: right;
-    }
-    .breadcrumbs{
-      direction: rtl;
-      text-align: right;
-    }
-    .breadcrumbs a{ font-weight:900; }
-
-    /* =========================
        Header
        ========================= */
     #header{
-      background: linear-gradient(135deg, #0ea5e9, #22c55e);
+      background: var(--grad);
       color:#fff;
       border-bottom: 0;
     }
@@ -84,6 +88,16 @@
       color:#fff !important;
       font-weight:900;
     }
+    #user-tools{ font-weight: 800; }
+
+    /* =========================
+       Breadcrumbs
+       ========================= */
+    .breadcrumbs{
+      direction: rtl;
+      text-align: right;
+    }
+    .breadcrumbs a{ font-weight:900; }
 
     /* =========================
        Toolbar
@@ -91,12 +105,11 @@
     #toolbar{
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      overflow: visible; /* ✅ لا تقفل السكرول */
+      overflow: visible; /* ✅ لا تحبس السكرول */
     }
 
     /* =========================
        Modules / Cards
-       ⚠️ لا تستخدم overflow:hidden على .module لأنه يحبس التمرير
        ========================= */
     .module,
     .dashboard #content-main .module{
@@ -106,18 +119,34 @@
     }
 
     /* =========================
-       Tables (القص داخل الجدول فقط)
+       ChangeList / Tables
        ========================= */
-    #changelist{
-      overflow: visible;
-    }
+    #changelist{ overflow: visible; }
+
     #changelist table{
       border-radius: 14px;
       overflow: hidden; /* ✅ هنا فقط */
     }
+
     #changelist table thead th,
-    #changelist table tbody td{
-      text-align: right;
+    #changelist table tbody td,
+    #changelist table tbody th{
+      text-align: right !important;
+    }
+
+    /* تحسين قراءة النص داخل القوائم */
+    #changelist table thead th{
+      font-weight: 900;
+      font-size: 13px;
+    }
+    #changelist table tbody td,
+    #changelist table tbody th{
+      font-weight: 700;
+      font-size: 14px;
+    }
+    #changelist table a{
+      font-weight: 900 !important;
+      text-decoration: none !important;
     }
 
     /* =========================
@@ -140,15 +169,22 @@
     }
 
     /* =========================
-       Small RTL touches
+       Forms RTL tweaks
        ========================= */
     .aligned label{
       float: right;
-      padding-left: 0;
-      padding-right: 10px;
+      padding-left: 0 !important;
+      padding-right: 10px !important;
+      font-weight: 900;
     }
     .aligned .form-row{
       text-align: right;
+    }
+
+    /* (اختياري) تحسين حقول البحث/الفلترة */
+    #changelist-search input[type="text"]{
+      border-radius: 12px;
+      font-family: var(--ff);
     }
   </style>
 {% endblock %}

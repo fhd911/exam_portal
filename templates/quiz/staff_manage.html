@@ -1,563 +1,751 @@
-{# templates/quiz/staff_manage.html #}
 {% extends "quiz/base.html" %}
 {% load static %}
 
 {% block title %}لوحة الإدارة — المحاولات{% endblock %}
 
-{% block base_css_extra %}
-  /* =========================================
-     BI / Scientific Admin Dashboard (RTL)
-     - أنحف + أصغر + احترافي
-     - بدون تمرير أفقي
-     IMPORTANT: لا تضع <style> داخل هذا البلوك
-     ========================================= */
-
-  :root{
-    --bi-bg0:#f7fbff;
-    --bi-bg1:#f3f8ff;
-    --bi-card: rgba(255,255,255,.88);
-    --bi-bdr: rgba(226,232,240,.92);
-
-    --bi-txt:#0f172a;
-    --bi-mut:#64748b;
-
-    --bi-pri:#2563eb;
-    --bi-ok:#16a34a;
-    --bi-warn:#d97706;
-    --bi-bad:#dc2626;
-
-    --bi-shadow: 0 14px 44px rgba(2,6,23,.07);
-    --bi-shadow2: 0 10px 22px rgba(2,6,23,.05);
-    --bi-ring: 0 0 0 4px rgba(37,99,235,.11);
-
-    --bi-r:18px;
-  }
-
-  /* لا نلمس .wrap في base.html — نخلي التخطيط داخل الصفحة */
-  .bi-wrap{max-width:1380px;margin:0 auto;padding:0 8px;}
-  .bi-shell{
-    background:
-      radial-gradient(900px 320px at 80% -40px, rgba(37,99,235,.09), transparent 55%),
-      radial-gradient(700px 260px at 10% -40px, rgba(22,163,74,.07), transparent 55%),
-      linear-gradient(180deg, var(--bi-bg0), var(--bi-bg1));
-    border-radius: 26px;
-    padding: 14px;
-    box-shadow: var(--bi-shadow);
-    border: 1px solid rgba(226,232,240,.88);
-  }
-
-  /* Header */
-  .bi-head{
-    display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;
-    margin-bottom: 10px;
-  }
-  .bi-title h1{
-    margin:0;
-    font-size:16px;
-    font-weight:900;
-    color:var(--bi-txt);
-    letter-spacing:.1px;
-  }
-  .bi-title p{
-    margin:6px 0 0;
-    line-height:1.85;
-    color:var(--bi-mut);
-    font-weight:700;
-    font-size:12.2px;
-  }
-
-  /* Top actions */
-  .bi-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .bi-btn{
-    appearance:none;
-    border:1px solid var(--bi-bdr);
-    background: rgba(255,255,255,.86);
-    padding:8px 11px;
-    border-radius:999px;
-    cursor:pointer;
-    font-weight:900;
-    font-size:12.2px;
-    color:var(--bi-txt);
-    box-shadow: 0 6px 14px rgba(2,6,23,.045);
-    transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
-    display:inline-flex;align-items:center;gap:8px;
-    white-space:nowrap;
-    text-decoration:none;
-  }
-  .bi-btn:hover{
-    transform: translateY(-1px);
-    box-shadow: var(--bi-shadow2);
-    border-color: rgba(37,99,235,.22);
-    background: rgba(255,255,255,.92);
-  }
-  .bi-btn:focus{outline:none; box-shadow: var(--bi-shadow2), var(--bi-ring);}
-
-  .bi-btn.red{border-color: rgba(220,38,38,.22); color:#b91c1c}
-  .bi-btn.blue{border-color: rgba(37,99,235,.24); color: #1d4ed8}
-  .bi-btn.green{border-color: rgba(22,163,74,.22); color:#15803d}
-
-  .bi-tag{
-    font-size:10.6px;
-    font-weight:1000;
-    padding:3px 7px;
-    border-radius:999px;
-    background: rgba(2,6,23,.045);
-    color: var(--bi-mut);
-  }
-
-  /* Card blocks */
-  .bi-card{
-    background: var(--bi-card);
-    border: 1px solid var(--bi-bdr);
-    border-radius: 22px;
-    box-shadow: var(--bi-shadow2);
-    overflow:hidden;
-  }
-  .bi-pad{padding:12px}
-
-  /* KPI strip */
-  .bi-kpi-grid{
-    display:grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap:10px;
-  }
-  @media (max-width: 1120px){
-    .bi-kpi-grid{grid-template-columns: repeat(2, minmax(0, 1fr));}
-  }
-  .bi-kpi{
-    border:1px solid rgba(226,232,240,.92);
-    border-radius: 18px;
-    padding: 10px 11px;
-    background:
-      radial-gradient(220px 86px at 15% 0%, rgba(37,99,235,.08), transparent 60%),
-      linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.86));
-    display:flex;align-items:center;justify-content:space-between;gap:10px;
-    min-height:68px;
-  }
-  .bi-kpi .lab{color:var(--bi-mut);font-weight:900;font-size:11.6px}
-  .bi-kpi .val{color:var(--bi-txt);font-weight:1000;font-size:16px}
-  .bi-kpi .mini{color:var(--bi-mut);font-weight:900;font-size:10.6px;margin-top:3px}
-  .bi-ic{
-    width:38px;height:38px;border-radius:14px;
-    display:flex;align-items:center;justify-content:center;
-    background: rgba(37,99,235,.09);
-    border:1px solid rgba(37,99,235,.16);
-    font-weight:1000;color: #1d4ed8;
-    flex:0 0 auto;
-  }
-  .bi-ic.ok{background: rgba(22,163,74,.09); border-color: rgba(22,163,74,.16); color:#15803d}
-  .bi-ic.w{background: rgba(217,119,6,.09); border-color: rgba(217,119,6,.16); color:#b45309}
-  .bi-ic.g{background: rgba(2,6,23,.05); border-color: rgba(2,6,23,.09); color:#334155}
-
-  /* Filters */
-  .bi-filters{
-    display:grid;
-    grid-template-columns: 2.3fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
-    gap:10px;
-    align-items:end;
-  }
-  @media (max-width: 1180px){
-    .bi-filters{grid-template-columns: 1fr 1fr;}
-  }
-
-  .bi-f{display:flex;flex-direction:column;gap:6px;}
-  .bi-lbl{font-size:11.6px;color:var(--bi-mut);font-weight:900}
-
-  .bi-in, .bi-sel{
-    height:38px;
-    border-radius:14px;
-    border:1px solid rgba(226,232,240,.92);
-    background: rgba(255,255,255,.92);
-    padding:0 11px;
-    font-weight:900;
-    color:var(--bi-txt);
-    outline:none;
-    transition: box-shadow .12s ease, border-color .12s ease, background .12s ease;
-    width:100%;
-    font-size:12.2px;
-  }
-  .bi-sel{padding-inline-start:10px}
-  .bi-in:focus,.bi-sel:focus{box-shadow: var(--bi-ring); border-color: rgba(37,99,235,.32)}
-  .bi-btnrow{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start}
-  .bi-btn.sm{padding:8px 13px;font-size:12px}
-
-  /* Table (لا تمرير أفقي) */
-  .bi-table-wrap{overflow-x:hidden;}
-  .bi-table{
-    width:100%;
-    border-collapse:separate;
-    border-spacing:0;
-    table-layout: fixed;
-  }
-  .bi-table thead th{
-    text-align:right;
-    font-size:11.4px;
-    color: var(--bi-mut);
-    font-weight:1000;
-    padding: 9px 10px;
-    background: rgba(241,245,249,.72);
-    border-bottom:1px solid rgba(226,232,240,.92);
-  }
-  .bi-table tbody td{
-    padding: 11px 10px;
-    border-bottom: 1px solid rgba(226,232,240,.88);
-    vertical-align: middle;
-    color: var(--bi-txt);
-    font-weight:800;
-    font-size:12.6px;
-    overflow:hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .bi-table tbody tr:hover td{background: rgba(37,99,235,.032)}
-
-  /* Column widths */
-  th.col-p, td.col-p{width: 28%;}
-  th.col-dom, td.col-dom{width: 10%;}
-  th.col-quiz, td.col-quiz{width: 10%;}
-  th.col-st, td.col-st{width: 10%;}
-  th.col-prog, td.col-prog{width: 16%;}
-  th.col-score, td.col-score{width: 8%;}
-  th.col-time, td.col-time{width: 10%;}
-  th.col-ip, td.col-ip{width: 8%;}
-  th.col-act, td.col-act{width: 10%;}
-
-  @media (max-width: 980px){
-    th.col-ip, td.col-ip{display:none;}
-    th.col-time, td.col-time{display:none;}
-    th.col-act, td.col-act{width: 18%;}
-    th.col-p, td.col-p{width: 40%;}
-  }
-
-  /* Participant cell */
-  .bi-pname{display:flex;flex-direction:column;gap:3px;min-width:0}
-  .bi-pname .n{font-weight:1000;color:var(--bi-txt);overflow:hidden;text-overflow:ellipsis}
-  .bi-pname .s{font-weight:800;color:var(--bi-mut);font-size:11.4px}
-
-  /* Chips */
-  .bi-chip{
-    display:inline-flex;align-items:center;gap:7px;
-    padding:6px 9px;border-radius:999px;
-    border:1px solid rgba(226,232,240,.92);
-    background: rgba(255,255,255,.90);
-    font-weight:900;
-    font-size:11.6px;
-    color: var(--bi-txt);
-    max-width:100%;
-  }
-  .bi-dot{width:7px;height:7px;border-radius:99px;background: rgba(100,116,139,.9)}
-  .bi-chip.ok{border-color: rgba(22,163,74,.24); background: rgba(22,163,74,.06); color:#14532d}
-  .bi-chip.w{border-color: rgba(217,119,6,.24); background: rgba(217,119,6,.07); color:#7c2d12}
-  .bi-chip.bad{border-color: rgba(220,38,38,.24); background: rgba(220,38,38,.07); color:#7f1d1d}
-  .bi-chip.blue{border-color: rgba(37,99,235,.22); background: rgba(37,99,235,.055); color:#1d4ed8}
-
-  /* Progress */
-  .bi-prog{display:flex;align-items:center;gap:10px;min-width:0;}
-  .bi-bar{
-    flex:1;
-    height:10px;border-radius:999px;
-    background: rgba(148,163,184,.20);
-    border:1px solid rgba(226,232,240,.88);
-    overflow:hidden;
-  }
-  .bi-bar > span{
-    display:block;height:100%;
-    background: linear-gradient(90deg, rgba(37,99,235,.95), rgba(29,78,216,.84));
-    width:0%;
-  }
-  .bi-prog .t{font-size:11.4px;color:var(--bi-mut);font-weight:1000}
-  .bi-prog .b{font-size:11.6px;color:var(--bi-txt);font-weight:1000}
-
-  /* Actions in table */
-  .bi-act{display:flex;gap:8px;flex-wrap:wrap}
-  .bi-act .bi-btn{padding:7px 10px;font-size:11.8px}
-
-  /* Pagination */
-  .bi-pager{
-    display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
-    padding: 10px 12px;
-    border-top: 1px solid rgba(226,232,240,.85);
-    background: rgba(255,255,255,.55);
-  }
-  .bi-pager .info{color:var(--bi-mut);font-weight:900;font-size:11.8px}
-  .bi-pbtn{
-    padding:8px 11px;border-radius:12px;border:1px solid var(--bi-bdr);
-    background: rgba(255,255,255,.90);
-    font-weight:900;color:var(--bi-txt);
-    text-decoration:none;
-    display:inline-flex;
-  }
-
-  /* Mobile spacing */
-  @media (max-width: 640px){
-    .bi-shell{padding:12px;border-radius:22px;}
-    .bi-pad{padding:12px;}
-    .bi-tools{gap:6px}
-    .bi-btn{padding:7px 10px;font-size:12px}
-  }
-{% endblock %}
-
 {% block content %}
-<div class="bi-wrap">
-  <div class="bi-shell">
+<div class="wrap">
 
-    <div class="bi-head">
-      <div class="bi-title">
-        <h1>لوحة الإدارة — المحاولات</h1>
-        <p>عرض إحصائي: مؤشرات KPI + فلاتر + جدول ثابت الأعمدة (بدون تمرير أفقي).</p>
+  <!-- ========================= Top header ========================= -->
+  <div class="top">
+    <div class="ttl">
+      <h1>المحاولات والتحليلات</h1>
+      <p>مؤشرات فورية + فلاتر + جدول + تفاصيل داخل الصفحة (Panel).</p>
+    </div>
+
+    <div class="actions">
+      <a class="btn soft" href="{% url 'quiz:staff_import_participants' %}">استيراد المرشحين</a>
+      <a class="btn soft" href="{% url 'quiz:staff_import_questions' %}">استيراد الأسئلة</a>
+
+      <button class="btn soft" type="button" id="copyFiltersBtn">نسخ رابط الفلاتر</button>
+
+      <a class="btn" href="{% url 'quiz:staff_export_xlsx' %}?{{ request.GET.urlencode }}">تصدير XLSX</a>
+      <a class="btn" href="{% url 'quiz:staff_export_csv' %}?{{ request.GET.urlencode }}">تصدير CSV</a>
+
+      <form method="post" action="{% url 'quiz:staff_logout' %}" style="display:inline;">
+        {% csrf_token %}
+        <button class="btn danger" type="submit">خروج</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================= Timeout alert ========================= -->
+  {% if timeout_alert.enabled %}
+    <div class="alertX" id="timeoutAlert">
+      <div class="aIc">⚠</div>
+      <div class="aTx">
+        <div class="aT">تنبيه: ارتفاع “Timeout” ضمن النتائج الحالية</div>
+        <div class="aS">
+          النسبة: <b>{{ timeout_alert.rate }}%</b>
+          ({{ timeout_alert.count }} من {{ kpi.finished }})
+          — العتبة: {{ timeout_alert.threshold }}%
+        </div>
+        <div class="aHint">
+          اقتراحات: راجع ثبات الاتصال/الأداء، خفّف حجم الواجهة، تأكد من انسيابية المؤقت، ووضوح الخيارات.
+        </div>
+      </div>
+      <button class="aClose" type="button" data-close="#timeoutAlert">إخفاء</button>
+    </div>
+  {% endif %}
+
+  <!-- ========================= Messages ========================= -->
+  {% if messages %}
+    <div class="msgs">
+      {% for m in messages %}
+        <div class="msg {{ m.tags|default:"info" }}">
+          <div class="ic">●</div>
+          <div class="tx">{{ m }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- ========================= KPIs ========================= -->
+  <div class="kpis">
+    <div class="kpi">
+      <div class="k">الإجمالي</div>
+      <div class="v">{{ kpi.total }}</div>
+      <div class="s">بعد الفلاتر</div>
+    </div>
+
+    <div class="kpi ok">
+      <div class="k">المكتملة</div>
+      <div class="v">{{ kpi.finished }}</div>
+      <div class="s">كل المنتهية</div>
+    </div>
+
+    <div class="kpi warn">
+      <div class="k">الجارية</div>
+      <div class="v">{{ kpi.running }}</div>
+      <div class="s">حاليًا داخل الاختبار</div>
+    </div>
+
+    <div class="kpi info">
+      <div class="k">متوسط الدرجة</div>
+      <div class="v">{{ kpi.avg_score }}</div>
+      <div class="s">للمكتملة فقط</div>
+    </div>
+
+    <div class="kpi pulse">
+      <div class="k">آخر 60 دقيقة</div>
+      <div class="v">{{ kpi.last_60m }}</div>
+      <div class="s">نشاط حديث</div>
+    </div>
+
+    <div class="kpi">
+      <div class="k">آخر 24 ساعة</div>
+      <div class="v">{{ kpi.last_24h }}</div>
+      <div class="s">حجم اليوم</div>
+    </div>
+  </div>
+
+  <!-- ========================= Quick summary ========================= -->
+  <div class="quickRow">
+    <div class="qCard">
+      <div class="qT">ملخص سريع — أعلى مجال</div>
+      {% if best_domain %}
+        <div class="qV">{{ best_domain.label }}</div>
+        <div class="qS">
+          متوسط: <b>{{ best_domain.avg_score }}</b> — منتهي: {{ best_domain.finished }} — Timeout: {{ best_domain.timeouts }}
+        </div>
+      {% else %}
+        <div class="qS">لا توجد بيانات مكتملة كافية.</div>
+      {% endif %}
+    </div>
+
+    <div class="qCard warn">
+      <div class="qT">ملخص سريع — أقل مجال</div>
+      {% if worst_domain %}
+        <div class="qV">{{ worst_domain.label }}</div>
+        <div class="qS">
+          متوسط: <b>{{ worst_domain.avg_score }}</b> — منتهي: {{ worst_domain.finished }} — Timeout: {{ worst_domain.timeouts }}
+        </div>
+      {% else %}
+        <div class="qS">لا توجد بيانات مكتملة كافية.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ========================= Analytics (NO STRETCH ✅) ========================= -->
+  <section class="ana">
+    <!-- Main chart -->
+    <div class="anaMain card">
+      <div class="cardHead">
+        <h3>النشاط — آخر 12 ساعة</h3>
+        <div class="mini">الإجمالي / منتهي / جاري</div>
       </div>
 
-      <div class="bi-tools">
-        <a class="bi-btn red" href="{% url 'quiz:staff_logout' %}"><span class="bi-tag">Logout</span> خروج</a>
-        <a class="bi-btn" href="{% url 'quiz:staff_manage' %}"><span class="bi-tag">Reset</span> تصفير الفلاتر</a>
-        <a class="bi-btn blue" href="{% url 'quiz:staff_export_csv' %}"><span class="bi-tag">CSV</span> تصدير CSV</a>
-        <a class="bi-btn blue" href="{% url 'quiz:staff_export_xlsx' %}"><span class="bi-tag">XLSX</span> تصدير XLSX</a>
-        <a class="bi-btn green" href="{% url 'quiz:staff_import_questions' %}"><span class="bi-tag">Sheets 3</span> استيراد الأسئلة</a>
-        <a class="bi-btn green" href="{% url 'quiz:staff_import_participants' %}"><span class="bi-tag">XLSX</span> استيراد المرشحين</a>
+      {{ trend|json_script:"trendData" }}
+
+      <div class="chartBox">
+        <canvas id="trendCanvas"></canvas>
+      </div>
+
+      <div class="legend">
+        <span class="lg"><i class="dot t"></i> إجمالي</span>
+        <span class="lg"><i class="dot f"></i> منتهي</span>
+        <span class="lg"><i class="dot r"></i> جاري</span>
       </div>
     </div>
 
-    <div class="bi-card">
-      <div class="bi-pad">
-
-        <!-- KPI -->
-        <div class="bi-kpi-grid">
-          <div class="bi-kpi">
-            <div>
-              <div class="lab">إجمالي النتائج (ضمن الفلاتر)</div>
-              <div class="val">{{ kpi.total }}</div>
-              <div class="mini">N</div>
-            </div>
-            <div class="bi-ic g">Σ</div>
-          </div>
-
-          <div class="bi-kpi">
-            <div>
-              <div class="lab">مكتملة</div>
-              <div class="val">{{ kpi.finished }}</div>
-              <div class="mini">Finished</div>
-            </div>
-            <div class="bi-ic ok">✓</div>
-          </div>
-
-          <div class="bi-kpi">
-            <div>
-              <div class="lab">جارية</div>
-              <div class="val">{{ kpi.running }}</div>
-              <div class="mini">Running</div>
-            </div>
-            <div class="bi-ic w">⏳</div>
-          </div>
-
-          <div class="bi-kpi">
-            <div>
-              <div class="lab">متوسط الدرجة (المنتهية)</div>
-              <div class="val">{{ kpi.avg_score }}</div>
-              <div class="mini">Mean</div>
-            </div>
-            <div class="bi-ic">μ</div>
-          </div>
-
-          <div class="bi-kpi">
-            <div>
-              <div class="lab">عدد الأسئلة</div>
-              <div class="val">{{ total_questions|default:50 }}</div>
-              <div class="mini">Total Q</div>
-            </div>
-            <div class="bi-ic g">Q</div>
-          </div>
+    <!-- Side stack (cards never stretch ✅) -->
+    <div class="anaSide">
+      <!-- Domain -->
+      <div class="card">
+        <div class="cardHead">
+          <h3>حسب المجال</h3>
+          <div class="mini">توزيع + متوسط + نسبة جاري</div>
         </div>
 
-        <div style="height:10px"></div>
+        <div class="domainGrid">
+          {% for d in by_domain %}
+            <div class="domainBox">
+              <div class="dTop">
+                <div class="dName">{{ d.label }}</div>
+                <div class="dTotal">{{ d.total }}</div>
+              </div>
 
-        <!-- Filters -->
-        <form method="get" class="bi-filters">
-          <div class="bi-f">
-            <div class="bi-lbl">بحث (هوية/اسم)</div>
-            <input class="bi-in" name="q" value="{{ filters.q }}" placeholder="اكتب رقم الهوية أو الاسم">
-          </div>
+              <div class="dMeta">
+                <span class="chip ok">منتهي: {{ d.finished }}</span>
+                <span class="chip warn">جاري: {{ d.running }}</span>
+                <span class="chip {% if d.timeouts > 0 %}warn{% else %}ok{% endif %}">Timeout: {{ d.timeouts }}</span>
+              </div>
 
-          <div class="bi-f">
-            <div class="bi-lbl">الحالة</div>
-            <select class="bi-sel" name="status">
-              <option value="all" {% if filters.status == "all" %}selected{% endif %}>الكل</option>
-              <option value="finished" {% if filters.status == "finished" %}selected{% endif %}>مكتمل</option>
-              <option value="running" {% if filters.status == "running" %}selected{% endif %}>جاري</option>
-            </select>
-          </div>
+              <div class="bar">
+                <div class="barFill" style="width:{% if d.total > 0 %}{% widthratio d.running d.total 100 %}{% else %}0{% endif %}%"></div>
+              </div>
 
-          <div class="bi-f">
-            <div class="bi-lbl">المجال</div>
-            <select class="bi-sel" name="domain">
-              <option value="" {% if not filters.domain %}selected{% endif %}>الكل</option>
-              <option value="deputy" {% if filters.domain == "deputy" %}selected{% endif %}>وكيل</option>
-              <option value="counselor" {% if filters.domain == "counselor" %}selected{% endif %}>موجه طلابي</option>
-              <option value="activity" {% if filters.domain == "activity" %}selected{% endif %}>رائد نشاط</option>
-            </select>
-          </div>
+              <div class="dFoot">
+                <div class="mini">متوسط: <b>{{ d.avg_score }}</b></div>
+                <div class="mini">نسبة الجاري: <b>{% if d.total > 0 %}{% widthratio d.running d.total 100 %}{% else %}0{% endif %}%</b></div>
+              </div>
+            </div>
+          {% empty %}
+            <div class="emptyCard">لا توجد بيانات.</div>
+          {% endfor %}
+        </div>
+      </div>
 
-          <div class="bi-f">
-            <div class="bi-lbl">الاختبار</div>
-            <select class="bi-sel" name="quiz">
-              <option value="" {% if not filters.quiz %}selected{% endif %}>الكل</option>
-              {% for qz in quizzes %}
-                <option value="{{ qz.id }}" {% if filters.quiz == qz.id|stringformat:"s" %}selected{% endif %}>{{ qz.title }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="bi-f">
-            <div class="bi-lbl">سبب الإنهاء</div>
-            <select class="bi-sel" name="fr">
-              <option value="" {% if not filters.fr %}selected{% endif %}>الكل</option>
-              <option value="normal" {% if filters.fr == "normal" %}selected{% endif %}>طبيعي</option>
-              <option value="timeout" {% if filters.fr == "timeout" %}selected{% endif %}>انتهاء وقت</option>
-              <option value="forced" {% if filters.fr == "forced" %}selected{% endif %}>إداري</option>
-            </select>
-          </div>
-
-          <div class="bi-f">
-            <div class="bi-lbl">من تاريخ</div>
-            <input class="bi-in" type="date" name="from" value="{{ filters.from }}">
-          </div>
-
-          <div class="bi-f">
-            <div class="bi-lbl">إلى تاريخ</div>
-            <input class="bi-in" type="date" name="to" value="{{ filters.to }}">
-          </div>
-
-          <div class="bi-f">
-            <div class="bi-lbl">ترتيب</div>
-            <select class="bi-sel" name="sort">
-              <option value="-started_at" {% if filters.sort == "-started_at" %}selected{% endif %}>الأحدث</option>
-              <option value="started_at" {% if filters.sort == "started_at" %}selected{% endif %}>الأقدم</option>
-              <option value="-score" {% if filters.sort == "-score" %}selected{% endif %}>الأعلى درجة</option>
-              <option value="score" {% if filters.sort == "score" %}selected{% endif %}>الأقل درجة</option>
-            </select>
-          </div>
-
-          <div class="bi-btnrow">
-            <button class="bi-btn blue sm" type="submit">تطبيق</button>
-            <a class="bi-btn sm" href="{% url 'quiz:staff_manage' %}">مسح</a>
-          </div>
-        </form>
-
-        <div style="height:12px"></div>
-
-        <!-- Table -->
-        <div class="bi-table-wrap">
-          <table class="bi-table">
-            <thead>
-              <tr>
-                <th class="col-p">المشارك</th>
-                <th class="col-dom">المجال</th>
-                <th class="col-quiz">الاختبار</th>
-                <th class="col-st">الحالة</th>
-                <th class="col-prog">التقدم</th>
-                <th class="col-score">الدرجة</th>
-                <th class="col-time">الوقت</th>
-                <th class="col-ip">IP</th>
-                <th class="col-act">إجراءات</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {% for a in attempts %}
-                <tr>
-                  <td class="col-p">
-                    <div class="bi-pname">
-                      <div class="n">{{ a.participant.full_name }}</div>
-                      <div class="s">هوية: {{ a.participant.national_id }}</div>
-                    </div>
-                  </td>
-
-                  <td class="col-dom">
-                    <span class="bi-chip blue"><span class="bi-dot"></span>{{ a.domain_label }}</span>
-                  </td>
-
-                  <td class="col-quiz">
-                    <span class="bi-chip"><span class="bi-dot"></span>{{ a.quiz.title }}</span>
-                  </td>
-
-                  <td class="col-st">
-                    {% if a.is_finished %}
-                      <span class="bi-chip ok"><span class="bi-dot" style="background:rgba(22,163,74,.9)"></span>مكتمل</span>
-                    {% else %}
-                      <span class="bi-chip w"><span class="bi-dot" style="background:rgba(217,119,6,.9)"></span>جاري</span>
-                    {% endif %}
-                  </td>
-
-                  <td class="col-prog">
-                    <div class="bi-prog">
-                      <div class="bi-bar">
-                        <span style="width: {{ a.progress_pct|default:0 }}%"></span>
-                      </div>
-                      <div style="display:flex;flex-direction:column;gap:2px;min-width:108px">
-                        <div class="b">{{ a.current_index|default:0 }} / {{ total_questions|default:50 }}</div>
-                        <div class="t">باقي {{ a.remaining_q|default:0 }}</div>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td class="col-score">
-                    <span class="bi-chip">
-                      {% if a.is_finished %}{{ a.score|default:0 }}{% else %}—{% endif %}
-                    </span>
-                  </td>
-
-                  <td class="col-time">
-                    <span class="bi-chip">{% if a.started_at %}{{ a.started_at|date:"Y-m-d H:i" }}{% else %}—{% endif %}</span>
-                  </td>
-
-                  <td class="col-ip">
-                    <span class="bi-chip">{{ a.started_ip|default:"—" }}</span>
-                  </td>
-
-                  <td class="col-act">
-                    <div class="bi-act">
-                      <a class="bi-btn" href="{% url 'quiz:staff_attempt_detail' a.id %}">تفاصيل</a>
-
-                      {% if not a.is_finished %}
-                        <a class="bi-btn red" href="{% url 'quiz:staff_attempt_finish_confirm' a.id %}">إنهاء</a>
-                      {% endif %}
-
-                      <a class="bi-btn" href="{% url 'quiz:staff_attempt_reset_confirm' a.id %}">إعادة</a>
-                    </div>
-                  </td>
-                </tr>
-              {% empty %}
-                <tr>
-                  <td colspan="9" style="padding:16px;color:var(--bi-mut);font-weight:900">
-                    لا توجد نتائج ضمن الفلاتر الحالية.
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+      <!-- Reasons -->
+      <div class="card">
+        <div class="cardHead">
+          <h3>أسباب الإنهاء</h3>
+          <div class="mini">طبيعي / تلقائي / إداري</div>
         </div>
 
-        <!-- Pager -->
-        <div class="bi-pager">
-          <div class="info">
-            الصفحة {{ attempts.number }} من {{ attempts.paginator.num_pages }} — إجمالي النتائج: {{ attempts.paginator.count }}
-          </div>
-
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            {% if attempts.has_previous %}
-              <a class="bi-pbtn" href="?page=1">الأولى</a>
-              <a class="bi-pbtn" href="?page={{ attempts.previous_page_number }}">السابق</a>
-            {% endif %}
-
-            {% if attempts.has_next %}
-              <a class="bi-pbtn" href="?page={{ attempts.next_page_number }}">التالي</a>
-              <a class="bi-pbtn" href="?page={{ attempts.paginator.num_pages }}">الأخيرة</a>
-            {% endif %}
-          </div>
+        <div class="reasonWrap">
+          {% for r in by_reason %}
+            <div class="reasonRow">
+              <div class="rName">
+                {% if r.finished_reason == "normal" %}طبيعي
+                {% elif r.finished_reason == "timeout" %}تلقائي (وقت)
+                {% elif r.finished_reason == "forced" %}إداري
+                {% else %}{{ r.finished_reason|default:"—" }}
+                {% endif %}
+              </div>
+              <div class="rBar">
+                <div class="rFill" style="width:{% if kpi.finished > 0 %}{% widthratio r.total kpi.finished 100 %}{% else %}0{% endif %}%"></div>
+              </div>
+              <div class="rVal">{{ r.total }}</div>
+            </div>
+          {% empty %}
+            <div class="emptyCard">لا توجد أسباب (لا توجد محاولات منتهية).</div>
+          {% endfor %}
         </div>
 
+        <div class="hint">
+          كلما زادت “تلقائي (وقت)” راجع جودة الاتصال/أداء الواجهة أو وضوح الأسئلة.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= Filters panel ========================= -->
+  <div class="panel">
+    <form class="filters" method="get">
+      <div class="f">
+        <label>بحث</label>
+        <input name="q" value="{{ filters.q }}" placeholder="هوية أو اسم">
+      </div>
+
+      <div class="f">
+        <label>الحالة</label>
+        <select name="status">
+          <option value="all" {% if filters.status == "all" %}selected{% endif %}>الكل</option>
+          <option value="running" {% if filters.status == "running" %}selected{% endif %}>جاري</option>
+          <option value="finished" {% if filters.status == "finished" %}selected{% endif %}>منتهي</option>
+        </select>
+      </div>
+
+      <div class="f">
+        <label>سبب الإنهاء</label>
+        <select name="fr">
+          <option value="" {% if not filters.fr %}selected{% endif %}>الكل</option>
+          <option value="normal" {% if filters.fr == "normal" %}selected{% endif %}>طبيعي</option>
+          <option value="timeout" {% if filters.fr == "timeout" %}selected{% endif %}>تلقائي (وقت)</option>
+          <option value="forced" {% if filters.fr == "forced" %}selected{% endif %}>إداري</option>
+        </select>
+      </div>
+
+      <div class="f">
+        <label>المجال</label>
+        <select name="domain">
+          <option value="" {% if not filters.domain %}selected{% endif %}>الكل</option>
+          <option value="deputy" {% if filters.domain == "deputy" %}selected{% endif %}>وكيل</option>
+          <option value="counselor" {% if filters.domain == "counselor" %}selected{% endif %}>موجه طلابي</option>
+          <option value="activity" {% if filters.domain == "activity" %}selected{% endif %}>رائد نشاط</option>
+        </select>
+      </div>
+
+      <div class="f">
+        <label>الاختبار</label>
+        <select name="quiz">
+          <option value="" {% if not filters.quiz %}selected{% endif %}>الكل</option>
+          {% for qz in quizzes %}
+            <option value="{{ qz.id }}" {% if filters.quiz|stringformat:"s" == qz.id|stringformat:"s" %}selected{% endif %}>
+              {{ qz.title }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="f">
+        <label>حد أدنى درجة</label>
+        <input name="min_score" value="{{ filters.min_score }}" placeholder="مثال: 30">
+      </div>
+
+      <div class="f">
+        <label>من تاريخ</label>
+        <input type="date" name="from" value="{{ filters.from }}">
+      </div>
+
+      <div class="f">
+        <label>إلى تاريخ</label>
+        <input type="date" name="to" value="{{ filters.to }}">
+      </div>
+
+      <div class="f">
+        <label>الترتيب</label>
+        <select name="sort">
+          <option value="-started_at" {% if filters.sort == "-started_at" %}selected{% endif %}>الأحدث</option>
+          <option value="started_at" {% if filters.sort == "started_at" %}selected{% endif %}>الأقدم</option>
+          <option value="-score" {% if filters.sort == "-score" %}selected{% endif %}>الأعلى درجة</option>
+          <option value="score" {% if filters.sort == "score" %}selected{% endif %}>الأقل درجة</option>
+        </select>
+      </div>
+
+      <div class="f btns">
+        <button class="btn" type="submit">تطبيق</button>
+        <a class="btn soft" href="{% url 'quiz:staff_manage' %}">تصفير</a>
+      </div>
+    </form>
+
+    <!-- Top best/worst -->
+    <div class="tops">
+      <div class="tcard">
+        <div class="tHead">
+          <div class="tTitle">أفضل 5</div>
+          <div class="mini">أعلى الدرجات (مكتملة)</div>
+        </div>
+        <div class="tList">
+          {% for a in top_best %}
+            <button class="tItem js-open-panel" type="button" data-attempt="{{ a.id }}">
+              <div>
+                <div class="nm">{{ a.participant.full_name }}</div>
+                <div class="meta">هوية {{ a.participant.national_id }} — {{ a.domain_label }}</div>
+              </div>
+              <div class="sc">{{ a.score }}</div>
+            </button>
+          {% empty %}
+            <div class="emptyCard">لا يوجد.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="tcard">
+        <div class="tHead">
+          <div class="tTitle">أضعف 5</div>
+          <div class="mini">أقل الدرجات (مكتملة)</div>
+        </div>
+        <div class="tList">
+          {% for a in top_worst %}
+            <button class="tItem js-open-panel" type="button" data-attempt="{{ a.id }}">
+              <div>
+                <div class="nm">{{ a.participant.full_name }}</div>
+                <div class="meta">هوية {{ a.participant.national_id }} — {{ a.domain_label }}</div>
+              </div>
+              <div class="sc">{{ a.score }}</div>
+            </button>
+          {% empty %}
+            <div class="emptyCard">لا يوجد.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>المرشح</th>
+            <th>المجال</th>
+            <th>الاختبار</th>
+            <th>الحالة</th>
+            <th>الدرجة</th>
+            <th>Timeout</th>
+            <th>الوقت</th>
+            <th>IP</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for a in attempts %}
+            <tr>
+              <td class="who">
+                <div class="nm">{{ a.participant.full_name|default:"—" }}</div>
+                <div class="id">هوية: {{ a.participant.national_id|default:"—" }}</div>
+              </td>
+
+              <td class="mut">{{ a.domain_label }}</td>
+              <td class="mut">{{ a.quiz.title }}</td>
+
+              <td>
+                {% if a.is_finished %}
+                  <span class="chip fin">منتهي</span>
+                {% else %}
+                  <span class="chip run">جاري</span>
+                {% endif %}
+                {% if a.is_finished and a.finished_reason %}
+                  <div class="mini">سبب: {{ a.finished_reason }}</div>
+                {% endif %}
+              </td>
+
+              <td>
+                <div class="score">{{ a.score|default:0 }}</div>
+                <div class="mini">من 50</div>
+              </td>
+
+              <td>
+                <span class="chip {% if a.timed_out_count|default:0 > 0 %}warn{% else %}ok{% endif %}">
+                  {{ a.timed_out_count|default:0 }}
+                </span>
+              </td>
+
+              <td class="mut">
+                <div class="mini">بدء: {{ a.started_at|date:"Y-m-d H:i" }}</div>
+                <div class="mini">انتهاء: {{ a.finished_at|date:"Y-m-d H:i"|default:"—" }}</div>
+              </td>
+
+              <td class="mut">{{ a.started_ip|default:"—" }}</td>
+
+              <td>
+                <div class="acts">
+                  <button class="miniBtn blue js-open-panel" type="button" data-attempt="{{ a.id }}">تفاصيل</button>
+                  <a class="miniBtn red" href="{% url 'quiz:staff_attempt_finish_confirm' a.id %}">إنهاء</a>
+                  <a class="miniBtn" href="{% url 'quiz:staff_attempt_reset_confirm' a.id %}">إعادة فتح</a>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="9" class="empty">لا توجد نتائج.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pager">
+      <div class="mut">صفحة {{ attempts.number }} من {{ attempts.paginator.num_pages }}</div>
+      <div class="pbtns">
+        {% if attempts.has_previous %}
+          <a class="miniBtn" href="?{{ request.GET.urlencode }}&page=1">الأولى</a>
+          <a class="miniBtn" href="?{{ request.GET.urlencode }}&page={{ attempts.previous_page_number }}">السابق</a>
+        {% endif %}
+        {% if attempts.has_next %}
+          <a class="miniBtn" href="?{{ request.GET.urlencode }}&page={{ attempts.next_page_number }}">التالي</a>
+          <a class="miniBtn" href="?{{ request.GET.urlencode }}&page={{ attempts.paginator.num_pages }}">الأخيرة</a>
+        {% endif %}
       </div>
     </div>
 
   </div>
 </div>
+
+<!-- ========================= Side Panel (AJAX) ========================= -->
+<div class="overlay" id="overlay" hidden></div>
+<aside class="side" id="side" aria-hidden="true">
+  <div class="sideHead">
+    <div>
+      <div class="sideTitle">تفاصيل المحاولة</div>
+      <div class="sideSub" id="sideSub">—</div>
+    </div>
+    <div class="sideBtns">
+      <a class="miniBtn" id="openFullBtn" href="#" target="_blank" rel="noopener">فتح صفحة</a>
+      <button class="miniBtn" id="closeSideBtn" type="button">إغلاق</button>
+    </div>
+  </div>
+  <div class="sideBody" id="sideBody">
+    <div class="loading">جاري التحميل…</div>
+  </div>
+</aside>
+
+<script>
+(function(){
+  // Close alert buttons
+  document.querySelectorAll("[data-close]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const sel = btn.getAttribute("data-close");
+      const el = sel ? document.querySelector(sel) : null;
+      if(el) el.remove();
+    });
+  });
+
+  // Copy filter link
+  const copyBtn = document.getElementById("copyFiltersBtn");
+  if(copyBtn){
+    copyBtn.addEventListener("click", async ()=>{
+      const url = window.location.href;
+      try{
+        await navigator.clipboard.writeText(url);
+      }catch(e){
+        const ta=document.createElement("textarea");
+        ta.value=url; document.body.appendChild(ta);
+        ta.select(); document.execCommand("copy");
+        ta.remove();
+      }
+      copyBtn.textContent = "تم النسخ ✅";
+      setTimeout(()=> copyBtn.textContent="نسخ رابط الفلاتر", 1200);
+    });
+  }
+
+  // Trend chart (stable height)
+  const el = document.getElementById("trendData");
+  const canvas = document.getElementById("trendCanvas");
+  if(el && canvas){
+    const data = JSON.parse(el.textContent || "{}");
+    const labels = data.labels || [];
+    const total = data.total || [];
+    const finished = data.finished || [];
+    const running = data.running || [];
+
+    const ctx = canvas.getContext("2d");
+
+    function resize(){
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = 210; // ✅ ثابت
+      draw(canvas.width, canvas.height);
+    }
+
+    function draw(W,H){
+      const pad = 18;
+      const maxVal = Math.max(1, ...total);
+
+      function y(v){ return H - pad - ((H - pad*2) * (v/maxVal)); }
+      function x(i){
+        if(labels.length <= 1) return pad;
+        return pad + ((W - pad*2) * (i/(labels.length-1)));
+      }
+      function line(arr, stroke, width){
+        ctx.beginPath();
+        arr.forEach((v,i)=>{
+          const X=x(i), Y=y(v);
+          if(i===0) ctx.moveTo(X,Y); else ctx.lineTo(X,Y);
+        });
+        ctx.lineWidth = width;
+        ctx.strokeStyle = stroke;
+        ctx.stroke();
+      }
+
+      ctx.clearRect(0,0,W,H);
+
+      // grid
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(15,23,42,.08)";
+      for(let k=0;k<4;k++){
+        const yy = pad + ((H - pad*2) * (k/3));
+        ctx.beginPath(); ctx.moveTo(pad,yy); ctx.lineTo(W-pad,yy); ctx.stroke();
+      }
+
+      line(total,   "#0ea5e9", 2.6);
+      line(finished,"#16a34a", 2.2);
+      line(running, "#f97316", 2.2);
+
+      // labels
+      ctx.fillStyle = "rgba(15,23,42,.65)";
+      ctx.font = "12px Cairo, system-ui, sans-serif";
+      const step = Math.max(1, Math.floor(labels.length/6));
+      labels.forEach((t,i)=>{
+        if(i%step!==0 && i!==labels.length-1) return;
+        const X = x(i);
+        ctx.fillText(t, Math.max(pad, X-16), H-6);
+      });
+    }
+
+    window.addEventListener("resize", resize);
+    resize();
+  }
+
+  // Side panel (AJAX)
+  const overlay = document.getElementById("overlay");
+  const side = document.getElementById("side");
+  const sideBody = document.getElementById("sideBody");
+  const closeBtn = document.getElementById("closeSideBtn");
+  const openFullBtn = document.getElementById("openFullBtn");
+  const sideSub = document.getElementById("sideSub");
+
+  function openPanel(){
+    overlay.hidden = false;
+    side.setAttribute("aria-hidden","false");
+    document.documentElement.classList.add("noScroll");
+  }
+  function closePanel(){
+    overlay.hidden = true;
+    side.setAttribute("aria-hidden","true");
+    document.documentElement.classList.remove("noScroll");
+  }
+
+  if(closeBtn) closeBtn.addEventListener("click", closePanel);
+  if(overlay) overlay.addEventListener("click", closePanel);
+  document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closePanel(); });
+
+  async function loadAttempt(attemptId){
+    sideBody.innerHTML = '<div class="loading">جاري التحميل…</div>';
+    sideSub.textContent = "محاولة #" + attemptId;
+    openFullBtn.href = "{% url 'quiz:staff_attempt_detail' 0 %}".replace("/0/","/"+attemptId+"/");
+
+    openPanel();
+
+    const url = "{% url 'quiz:staff_attempt_detail' 0 %}".replace("/0/","/"+attemptId+"/") + "?partial=1";
+    try{
+      const resp = await fetch(url, {headers: {"X-Requested-With":"XMLHttpRequest"}});
+      const html = await resp.text();
+      sideBody.innerHTML = html;
+    }catch(err){
+      sideBody.innerHTML = '<div class="emptyCard">تعذر تحميل التفاصيل. حاول مرة أخرى.</div>';
+    }
+  }
+
+  document.querySelectorAll(".js-open-panel").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.getAttribute("data-attempt");
+      if(id) loadAttempt(id);
+    });
+  });
+
+})();
+</script>
+
+<style>
+  /* ===== Layout */
+  .wrap{max-width:1250px;margin:0 auto;padding:12px 10px 60px}
+  .top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+  .ttl h1{margin:0;font-size:18px;font-weight:1100}
+  .ttl p{margin:6px 0 0;color:var(--mut);font-weight:900}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+  .btn{border:0;border-radius:999px;padding:9px 12px;font-weight:1100;cursor:pointer;text-decoration:none;display:inline-flex;gap:8px;align-items:center;background:#0ea5e9;color:#fff}
+  .btn.soft{background:#eef6ff;color:#0b4c7a;border:1px solid rgba(15,23,42,.08)}
+  .btn.danger{background:#fff1f2;color:#9f1239;border:1px solid rgba(159,18,57,.18)}
+
+  /* Alerts */
+  .alertX{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:18px;border:1px solid rgba(154,52,18,.18);background:#fff7ed;margin-top:12px}
+  .aIc{width:34px;height:34px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(154,52,18,.10);color:#9a3412;font-weight:1200}
+  .aT{font-weight:1300}
+  .aS{margin-top:4px;color:#9a3412;font-weight:1100}
+  .aHint{margin-top:8px;color:rgba(15,23,42,.7);font-weight:1000;line-height:1.8}
+  .aClose{margin-inline-start:auto;border:1px solid rgba(154,52,18,.20);background:#fff;border-radius:999px;padding:8px 10px;font-weight:1200;cursor:pointer;color:#9a3412}
+
+  /* Messages */
+  .msgs{display:grid;gap:8px;margin:12px 0}
+  .msg{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:16px;border:1px solid rgba(231,238,246,.95);background:#fff;box-shadow:0 10px 22px rgba(2,44,34,.05);font-weight:1000}
+  .msg .ic{opacity:.7}
+  .msg.error{background:#fff1f2;border-color:rgba(159,18,57,.16);color:#9f1239}
+  .msg.success{background:#ecfdf5;border-color:rgba(6,95,70,.16);color:#065f46}
+  .msg.info{background:#eff6ff;border-color:rgba(29,78,216,.16);color:#1d4ed8}
+  .msg.warning{background:#fff7ed;border-color:rgba(154,52,18,.16);color:#9a3412}
+
+  /* KPIs */
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:12px 0}
+  @media (max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:#fff;border:1px solid rgba(231,238,246,.95);border-radius:20px;padding:12px;box-shadow:0 12px 28px rgba(2,44,34,.06)}
+  .kpi.ok{background:#ecfdf5}
+  .kpi.warn{background:#fff7ed}
+  .kpi.info{background:#eff6ff}
+  .kpi.pulse{background:linear-gradient(135deg, rgba(14,165,233,.12), rgba(34,197,94,.10)); position:relative; overflow:hidden}
+  .kpi.pulse:after{content:"";position:absolute;inset:-40px;background:radial-gradient(circle at 30% 30%, rgba(14,165,233,.22), transparent 55%);filter:blur(2px)}
+  .kpi .k{font-size:12px;color:var(--mut);font-weight:1100;position:relative}
+  .kpi .v{font-size:20px;font-weight:1200;margin-top:6px;position:relative}
+  .kpi .s{font-size:12px;color:var(--mut);font-weight:900;margin-top:6px;line-height:1.7;position:relative}
+
+  /* Quick */
+  .quickRow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+  @media (max-width:1100px){.quickRow{grid-template-columns:1fr}}
+  .qCard{background:#fff;border:1px solid rgba(231,238,246,.95);border-radius:22px;padding:12px;box-shadow:0 16px 34px rgba(2,44,34,.06)}
+  .qCard.warn{background:#fff7ed}
+  .qT{font-size:12px;color:var(--mut);font-weight:1200}
+  .qV{margin-top:6px;font-size:16px;font-weight:1400}
+  .qS{margin-top:6px;color:rgba(15,23,42,.7);font-weight:1000;line-height:1.8}
+
+  /* ✅ Analytics (Flex eliminates row-stretch بالكامل) */
+  .ana{display:flex;gap:10px;margin:12px 0;align-items:flex-start}
+  .anaMain{flex:1 1 740px;min-width:520px}
+  .anaSide{flex:0 0 360px;display:grid;gap:10px;align-content:start}
+  @media (max-width:1100px){
+    .ana{flex-direction:column}
+    .anaMain{min-width:0}
+    .anaSide{width:100%;flex:1 1 auto}
+  }
+
+  .card{background:#fff;border:1px solid rgba(231,238,246,.95);border-radius:22px;padding:12px;box-shadow:0 16px 34px rgba(2,44,34,.06);height:auto}
+  .cardHead{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-end}
+  .cardHead h3{margin:0;font-size:15px;font-weight:1200}
+  .mini{color:var(--mut);font-weight:1000;font-size:12px}
+
+  .domainGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
+  @media (max-width:1100px){.domainGrid{grid-template-columns:1fr}}
+  .domainBox{border:1px solid rgba(231,238,246,.95);border-radius:18px;padding:10px;background:#fafcff}
+  .dTop{display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .dName{font-weight:1200}
+  .dTotal{font-weight:1300;font-size:16px}
+  .dMeta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .bar{height:10px;border-radius:999px;background:rgba(15,23,42,.08);overflow:hidden;margin-top:10px}
+  .barFill{height:100%;border-radius:999px;background:linear-gradient(90deg,#f97316,#0ea5e9)}
+  .dFoot{display:flex;justify-content:space-between;gap:10px;margin-top:8px;flex-wrap:wrap}
+
+  .chip{display:inline-flex;align-items:center;justify-content:center;padding:6px 9px;border-radius:999px;border:1px solid rgba(15,23,42,.10);font-weight:1200;font-size:12px;background:#fff}
+  .chip.ok{background:#ecfdf5;color:#065f46;border-color:rgba(6,95,70,.16)}
+  .chip.warn{background:#fff7ed;color:#9a3412;border-color:rgba(154,52,18,.16)}
+  .chip.fin{background:#ecfdf5;color:#065f46;border-color:rgba(6,95,70,.16)}
+  .chip.run{background:#fff7ed;color:#9a3412;border-color:rgba(154,52,18,.16)}
+
+  .reasonWrap{margin-top:10px;display:grid;gap:10px}
+  .reasonRow{display:grid;grid-template-columns:120px 1fr 48px;gap:10px;align-items:center}
+  .rName{font-weight:1200}
+  .rBar{height:10px;border-radius:999px;background:rgba(15,23,42,.08);overflow:hidden}
+  .rFill{height:100%;border-radius:999px;background:linear-gradient(90deg,#16a34a,#0ea5e9)}
+  .rVal{text-align:left;font-weight:1300}
+  .hint{margin-top:12px;padding:10px 12px;border-radius:16px;background:#eff6ff;border:1px solid rgba(29,78,216,.16);color:#1d4ed8;font-weight:1100;line-height:1.9}
+
+  .chartBox{margin-top:10px;border-radius:18px;border:1px solid rgba(231,238,246,.95);background:#fff;overflow:hidden;padding:10px}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;justify-content:flex-start}
+  .lg{display:flex;gap:8px;align-items:center;font-weight:1100;color:var(--mut)}
+  .dot{width:10px;height:10px;border-radius:999px;display:inline-block}
+  .dot.t{background:#0ea5e9}
+  .dot.f{background:#16a34a}
+  .dot.r{background:#f97316}
+
+  .panel{background:#fff;border:1px solid rgba(231,238,246,.95);border-radius:22px;padding:12px;box-shadow:0 16px 34px rgba(2,44,34,.06)}
+  .filters{display:grid;grid-template-columns:repeat(10,1fr);gap:10px;align-items:end}
+  @media (max-width:1100px){.filters{grid-template-columns:repeat(4,1fr)}}
+  @media (max-width:700px){.filters{grid-template-columns:repeat(2,1fr)}}
+  .f label{display:block;font-size:12px;font-weight:1100;color:var(--mut);margin:0 2px 6px}
+  .f input,.f select{width:100%;border-radius:14px;border:1px solid rgba(15,23,42,.10);padding:10px;background:#fff;outline:none;font-weight:1000}
+  .f.btns{display:flex;gap:8px;grid-column:span 2}
+
+  .tops{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+  @media (max-width:1100px){.tops{grid-template-columns:1fr}}
+  .tcard{border:1px solid rgba(231,238,246,.95);border-radius:22px;background:#fafcff;padding:12px}
+  .tHead{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+  .tTitle{font-weight:1300}
+  .tList{display:grid;gap:8px;margin-top:10px}
+  .tItem{width:100%;text-align:right;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid rgba(231,238,246,.95);background:#fff;border-radius:18px;padding:10px;text-decoration:none;color:#0f172a;cursor:pointer;transition:transform .15s ease}
+  .tItem:hover{transform:translateY(-1px)}
+  .tItem .nm{font-weight:1200}
+  .tItem .meta{margin-top:4px;font-size:12px;color:var(--mut);font-weight:1000}
+  .tItem .sc{font-weight:1400;font-size:16px}
+
+  .table{margin-top:12px;border-radius:18px;border:1px solid rgba(231,238,246,.95);overflow:auto}
+  .tbl{width:100%;border-collapse:separate;border-spacing:0;min-width:1080px}
+  .tbl thead th{position:sticky;top:0;background:#f8fafc;border-bottom:1px solid rgba(15,23,42,.08);padding:10px;font-size:12px;font-weight:1200;white-space:nowrap}
+  .tbl tbody td{border-bottom:1px solid rgba(15,23,42,.06);padding:10px;font-weight:1000;font-size:12.8px;vertical-align:middle}
+  .empty{text-align:center;padding:18px;color:var(--mut);font-weight:1100}
+
+  .who .nm{font-weight:1200}
+  .who .id{margin-top:4px;font-size:12px;color:var(--mut);font-weight:1000}
+  .score{font-size:16px;font-weight:1300}
+
+  .acts{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+  .miniBtn{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;border:1px solid rgba(15,23,42,.10);background:#fff;text-decoration:none;color:#0f172a;font-weight:1200;font-size:12px;cursor:pointer}
+  .miniBtn.blue{background:#eff6ff;color:#1d4ed8;border-color:rgba(29,78,216,.16)}
+  .miniBtn.red{background:#fff1f2;color:#9f1239;border-color:rgba(159,18,57,.16)}
+  .mut{color:var(--mut);font-weight:1000}
+
+  .pager{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  .pbtns{display:flex;gap:8px;flex-wrap:wrap}
+  .emptyCard{padding:12px;border-radius:16px;border:1px dashed rgba(15,23,42,.16);color:var(--mut);font-weight:1100;background:#fff}
+
+  /* Side panel */
+  .noScroll{overflow:hidden}
+  .overlay{position:fixed;inset:0;background:rgba(15,23,42,.35);backdrop-filter:blur(2px);z-index:60}
+  .side{position:fixed;top:0;bottom:0;left:0;width:min(560px, 92vw);background:#fff;border-right:1px solid rgba(231,238,246,.95);z-index:61;transform:translateX(-105%);transition:transform .22s ease;box-shadow:0 20px 50px rgba(2,44,34,.18)}
+  .side[aria-hidden="false"]{transform:translateX(0)}
+  .sideHead{padding:12px;border-bottom:1px solid rgba(15,23,42,.08);display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .sideTitle{font-weight:1400}
+  .sideSub{margin-top:4px;color:var(--mut);font-weight:1000;font-size:12px}
+  .sideBtns{display:flex;gap:8px;flex-wrap:wrap}
+  .sideBody{padding:12px;overflow:auto;height:calc(100vh - 64px)}
+  .loading{padding:12px;border-radius:16px;background:#f8fafc;border:1px solid rgba(15,23,42,.08);font-weight:1200}
+</style>
 {% endblock %}

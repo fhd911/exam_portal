@@ -28,3 +28,6 @@ staticfiles/
 # Optional: block other office temp files
 ~$*.docx
 ~$*.pptx
+
+# Backup files
+*.bak

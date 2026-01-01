@@ -1,0 +1,65 @@
+{% extends "quiz/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="wrap">
+  <div class="box">
+    <div class="head">
+      <div>
+        <h2>{{ title }}</h2>
+        <p>{{ message }}</p>
+      </div>
+      <a class="btn soft" href="{% url 'quiz:staff_attempt_detail' attempt.id %}">رجوع للتفاصيل</a>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div class="it">
+          <div class="k">المرشح</div>
+          <div class="v">{{ attempt.participant.full_name }}</div>
+          <div class="s">هوية: {{ attempt.participant.national_id }}</div>
+        </div>
+
+        <div class="it">
+          <div class="k">المجال</div>
+          <div class="v">{{ attempt.domain_label }}</div>
+          <div class="s">الاختبار: {{ attempt.quiz.title }}</div>
+        </div>
+
+        <div class="it">
+          <div class="k">الحالة</div>
+          <div class="v">{% if attempt.is_finished %}منتهي{% else %}جاري{% endif %}</div>
+          <div class="s">درجة: {{ attempt.score|default:0 }}</div>
+        </div>
+      </div>
+    </div>
+
+    <form class="foot" method="post" action="{% url action_url_name attempt.id %}">
+      {% csrf_token %}
+      <a class="btn soft" href="{% url 'quiz:staff_manage' %}">إلغاء</a>
+      <button class="btn danger" type="submit" onclick="return confirm('متأكد من تنفيذ العملية؟');">
+        {{ action_btn }}
+      </button>
+    </form>
+  </div>
+</div>
+
+<style>
+  .wrap{max-width:900px;margin:0 auto;padding:12px 10px 44px}
+  .box{background:#fff;border:1px solid rgba(231,238,246,.95);border-radius:22px;padding:14px;box-shadow:0 16px 34px rgba(2,44,34,.06)}
+  .head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
+  h2{margin:0;font-size:18px;font-weight:1200}
+  p{margin:6px 0 0;color:var(--mut);font-weight:1000;line-height:1.9}
+  .btn{border:0;border-radius:999px;padding:9px 12px;font-weight:1200;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:#0ea5e9;color:#fff}
+  .btn.soft{background:#eef6ff;color:#0b4c7a;border:1px solid rgba(15,23,42,.08)}
+  .btn.danger{background:#fff1f2;color:#9f1239;border:1px solid rgba(159,18,57,.18)}
+  .card{margin-top:12px;border-radius:18px;border:1px solid rgba(231,238,246,.95);padding:12px;background:#fafcff}
+  .row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media (max-width:900px){.row{grid-template-columns:1fr}}
+  .it{background:#fff;border:1px solid rgba(231,238,246,.95);border-radius:18px;padding:12px}
+  .k{font-size:12px;color:var(--mut);font-weight:1100}
+  .v{margin-top:6px;font-size:14px;font-weight:1200}
+  .s{margin-top:6px;font-size:12px;color:var(--mut);font-weight:1000}
+  .foot{display:flex;justify-content:flex-end;gap:8px;margin-top:12px;flex-wrap:wrap}
+</style>
+{% endblock %}

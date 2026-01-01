@@ -11,7 +11,8 @@ from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Avg, Q
+from django.db.models import Avg, Q, Count
+from django.db.models.functions import TruncHour
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -204,7 +205,6 @@ def _auto_advance_if_timeup(attempt: Attempt, questions: list[Question]) -> None
     if total <= 0:
         return
 
-    # لو current_index صار خارج النطاق (احتياط)
     if attempt.current_index < 0:
         attempt.current_index = 0
         attempt.save(update_fields=["current_index"])
@@ -386,7 +386,6 @@ def confirm_view(request: HttpRequest) -> HttpResponse:
     next_windows = _get_next_windows_for_participant(p, limit=3)
     current_domain_label = active_window.domain_label if active_window else ""
 
-    # لو فيه نافذة الآن لكن غير مسجّل فيها
     if active_window and (not _is_enrolled_for_domain(p, active_window.domain)):
         messages.error(request, _window_gate_message(p, active_window, next_windows))
         return render(
@@ -401,7 +400,6 @@ def confirm_view(request: HttpRequest) -> HttpResponse:
             },
         )
 
-    # لو ما فيه نافذة الآن: نعرض رسالة + مواعيد قادمة
     if not active_window:
         messages.info(request, _window_gate_message(p, None, next_windows))
 
@@ -410,7 +408,6 @@ def confirm_view(request: HttpRequest) -> HttpResponse:
             messages.error(request, "لا يمكنك المتابعة بدون الموافقة على الإقرار.")
             return redirect("quiz:confirm")
 
-        # re-check now (لحظة البدء)
         active_window2 = _get_active_window_now()
         next_windows2 = _get_next_windows_for_participant(p, limit=3)
 
@@ -448,7 +445,6 @@ def confirm_view(request: HttpRequest) -> HttpResponse:
                 .first()
             )
             if active_attempt:
-                # نفس الجلسة -> يكمل
                 if (active_attempt.session_key or "") == skey:
                     request.session[SESSION_ATTEMPT_ID] = active_attempt.id
                     request.session[SESSION_CONFIRMED] = True
@@ -468,7 +464,6 @@ def confirm_view(request: HttpRequest) -> HttpResponse:
                 started_at=timezone.now(),
             )
 
-            # ✅ قفل مرة واحدة
             Participant.objects.filter(id=p_locked.id).update(
                 has_taken_exam=True,
                 locked_domain=active_window2.domain,
@@ -518,13 +513,11 @@ def question_view(request: HttpRequest) -> HttpResponse:
         _finish_attempt(attempt, reason="forced")
         return redirect("quiz:finish")
 
-    # Safety net (server-side)
     _auto_advance_if_timeup(attempt, questions)
     _finalize_attempt_if_done(attempt, len(questions))
     if attempt.is_finished:
         return redirect("quiz:finish")
 
-    # احتياط: لو صار خارج النطاق
     if attempt.current_index < 0:
         attempt.current_index = 0
         attempt.save(update_fields=["current_index"])
@@ -554,7 +547,6 @@ def question_view(request: HttpRequest) -> HttpResponse:
         deadline2 = (ans.started_at or now2) + timedelta(seconds=sec)
         remaining2 = int(max(0, (deadline2 - now2).total_seconds()))
 
-        # time over before submit
         if remaining2 <= 0 and ans.answered_at is None:
             ans.selected_choice = None
             ans.answered_at = now2
@@ -597,7 +589,6 @@ def question_view(request: HttpRequest) -> HttpResponse:
 
 def finish_view(request: HttpRequest) -> HttpResponse:
     attempt = _get_attempt_from_session(request)
-    # لو وصل هنا وما زال غير منتهي (نادر) نختمه بأمان
     if attempt and not attempt.is_finished:
         questions_count = Question.objects.filter(quiz=attempt.quiz).count()
         _finalize_attempt_if_done(attempt, questions_count)
@@ -699,19 +690,88 @@ def _apply_attempt_filters(request: HttpRequest, qs):
 
 
 # ======================================================
-# Staff - Dashboard
+# Staff - Dashboard (Full)
 # ======================================================
 @staff_member_required
 def staff_manage_view(request: HttpRequest) -> HttpResponse:
     base = Attempt.objects.select_related("participant", "quiz")
     qs, filters = _apply_attempt_filters(request, base)
 
+    # KPIs
     kpi_total = qs.count()
     kpi_finished = qs.filter(is_finished=True).count()
     kpi_running = qs.filter(is_finished=False).count()
     kpi_avg = qs.filter(is_finished=True).aggregate(a=Avg("score"))["a"] or 0
     kpi_avg = round(float(kpi_avg), 2)
 
+    now = timezone.now()
+    kpi_last_60m = qs.filter(started_at__gte=now - timedelta(minutes=60)).count()
+    kpi_last_24h = qs.filter(started_at__gte=now - timedelta(hours=24)).count()
+
+    # Breakdown by domain
+    by_domain = list(
+        qs.values("domain")
+        .annotate(
+            total=Count("id"),
+            finished=Count("id", filter=Q(is_finished=True)),
+            running=Count("id", filter=Q(is_finished=False)),
+            avg_score=Avg("score", filter=Q(is_finished=True)),
+            timeouts=Count("id", filter=Q(timed_out_count__gt=0)),
+        )
+        .order_by("-total")
+    )
+    for d in by_domain:
+        d["label"] = domain_label(d["domain"])
+        d["avg_score"] = round(float(d["avg_score"] or 0), 2)
+
+    scored_domains = [d for d in by_domain if (d.get("finished") or 0) > 0]
+    best_domain = max(scored_domains, key=lambda x: (x.get("avg_score") or 0), default=None)
+    worst_domain = min(scored_domains, key=lambda x: (x.get("avg_score") or 0), default=None)
+
+    # Timeout alert
+    timeout_threshold = 15  # %
+    timeout_count = qs.filter(is_finished=True, timed_out_count__gt=0).count()
+    timeout_rate = (timeout_count / kpi_finished * 100) if kpi_finished else 0
+    timeout_alert = {
+        "enabled": (kpi_finished > 0 and timeout_rate >= timeout_threshold),
+        "rate": round(timeout_rate, 1),
+        "count": int(timeout_count),
+        "threshold": int(timeout_threshold),
+    }
+
+    # Breakdown by finish reason
+    by_reason = list(
+        qs.filter(is_finished=True)
+        .values("finished_reason")
+        .annotate(total=Count("id"))
+        .order_by("-total")
+    )
+
+    # Hourly trend (last 12 hours)
+    tz = timezone.get_current_timezone()
+    start = now - timedelta(hours=12)
+    hourly = list(
+        qs.filter(started_at__gte=start)
+        .annotate(h=TruncHour("started_at", tzinfo=tz))
+        .values("h")
+        .annotate(
+            total=Count("id"),
+            finished=Count("id", filter=Q(is_finished=True)),
+            running=Count("id", filter=Q(is_finished=False)),
+        )
+        .order_by("h")
+    )
+
+    trend_labels = [timezone.localtime(x["h"]).strftime("%H:%M") for x in hourly]
+    trend_total = [int(x["total"] or 0) for x in hourly]
+    trend_finished = [int(x["finished"] or 0) for x in hourly]
+    trend_running = [int(x["running"] or 0) for x in hourly]
+
+    # Top best/worst
+    top_best = list(qs.filter(is_finished=True).order_by("-score", "-finished_at")[:5])
+    top_worst = list(qs.filter(is_finished=True).order_by("score", "-finished_at")[:5])
+
+    # Paging
     paginator = Paginator(qs, 25)
     page_obj = paginator.get_page(request.GET.get("page") or 1)
 
@@ -724,7 +784,27 @@ def staff_manage_view(request: HttpRequest) -> HttpResponse:
             "attempts": page_obj,
             "quizzes": quizzes,
             "filters": filters,
-            "kpi": {"total": kpi_total, "finished": kpi_finished, "running": kpi_running, "avg_score": kpi_avg},
+            "kpi": {
+                "total": kpi_total,
+                "finished": kpi_finished,
+                "running": kpi_running,
+                "avg_score": kpi_avg,
+                "last_60m": kpi_last_60m,
+                "last_24h": kpi_last_24h,
+            },
+            "by_domain": by_domain,
+            "best_domain": best_domain,
+            "worst_domain": worst_domain,
+            "timeout_alert": timeout_alert,
+            "by_reason": by_reason,
+            "trend": {
+                "labels": trend_labels,
+                "total": trend_total,
+                "finished": trend_finished,
+                "running": trend_running,
+            },
+            "top_best": top_best,
+            "top_worst": top_worst,
         },
     )
 

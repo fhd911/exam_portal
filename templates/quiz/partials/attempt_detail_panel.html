@@ -1,290 +1,46 @@
-{# templates/quiz/partials/attempt_detail_panel.html #}
-{% load static %}
-
-<style>
-  .pwrap{max-width:100%}
-  .meta{
-    display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;
-    margin-bottom:10px;
-  }
-  .meta .h{
-    display:flex;flex-direction:column;gap:4px;
-  }
-  .meta .h .t{font-size:16px;font-weight:1100;margin:0}
-  .meta .h .s{font-size:12px;color:var(--mut);line-height:1.7}
-  .pill{
-    display:inline-flex;align-items:center;gap:8px;
-    padding:6px 10px;border-radius:999px;
-    border:1px solid rgba(2,44,34,.12);
-    background:rgba(14,165,233,.08);
-    font-weight:1000;font-size:12px;color:var(--ink);
-    white-space:nowrap;
-  }
-  .pill.g{background:rgba(34,197,94,.10);border-color:rgba(34,197,94,.25)}
-  .pill.y{background:rgba(250,204,21,.12);border-color:rgba(250,204,21,.28)}
-  .pill.r{background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.25)}
-  .glass{
-    background:rgba(255,255,255,.84);
-    border:1px solid rgba(231,238,246,.95);
-    border-radius:18px;
-    box-shadow: 0 10px 22px rgba(2,44,34,.06);
-  }
-
-  .grid{
-    display:grid;grid-template-columns: repeat(2, minmax(0,1fr));
-    gap:10px;margin-bottom:10px
-  }
-  @media (max-width: 820px){.grid{grid-template-columns:1fr}}
-  .kv{padding:12px}
-  .kv .k{font-size:12px;color:var(--mut);font-weight:1000;margin-bottom:6px}
-  .kv .v{font-size:13px;font-weight:1100;line-height:1.8}
-
-  .bar{
-    padding:12px;margin-bottom:10px
-  }
-  .barrow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-  .track{
-    width:100%;height:12px;border-radius:999px;
-    background:rgba(15,23,42,.06);
-    border:1px solid rgba(148,163,184,.20);
-    overflow:hidden;
-    margin-top:10px;
-  }
-  .fill{
-    height:100%;
-    width:0%;
-    background:linear-gradient(135deg,#0ea5e9,#22c55e);
-    border-radius:999px;
-  }
-
-  .tbl{
-    padding:12px;
-  }
-  .tblhead{
-    display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
-    margin-bottom:10px
-  }
-  .tblhead .t{font-weight:1100}
-  table{
-    width:100%;
-    border-collapse:separate;border-spacing:0;
-    overflow:hidden;border-radius:14px;
-    border:1px solid rgba(148,163,184,.22);
-    background:rgba(255,255,255,.92);
-  }
-  thead th{
-    text-align:right;
-    padding:10px 10px;
-    font-size:12px;font-weight:1100;color:var(--mut);
-    background:linear-gradient(135deg, rgba(14,165,233,.12), rgba(34,197,94,.09));
-    border-bottom:1px solid rgba(148,163,184,.20);
-    position:sticky;top:0;
-  }
-  tbody td{
-    padding:10px 10px;
-    border-bottom:1px solid rgba(148,163,184,.16);
-    vertical-align:top;
-    font-weight:900;
-  }
-  tbody tr:hover td{background:rgba(14,165,233,.03)}
-  .mut{color:var(--mut);font-weight:1000}
-  .ok{color:#166534}
-  .bad{color:#991b1b}
-  .ans{
-    display:flex;flex-direction:column;gap:4px;
-  }
-  .ans .pick{font-weight:1100}
-  .ans .meta2{font-size:12px;color:var(--mut);font-weight:1000}
-  .small{font-size:12px}
-</style>
-
-<div class="pwrap">
-  <div class="meta">
-    <div class="h">
-      <p class="t">تفاصيل المحاولة #{{ attempt.id }}</p>
-      <div class="s">
-        {{ attempt.participant.full_name }}
-        <span class="mut">({{ attempt.participant.national_id }})</span>
-        — {{ attempt.participant.get_domain_display }}
-      </div>
-    </div>
-
-    {% if attempt.is_finished %}
-      <span class="pill g">منتهية</span>
-    {% else %}
-      <span class="pill y">جارية</span>
-    {% endif %}
+<div class="panel">
+  <div class="hd">
+    <div class="t">محاولة #{{ attempt.id }}</div>
+    <div class="s">{{ attempt.participant.full_name }} — {{ attempt.domain_label }}</div>
   </div>
 
   <div class="grid">
-    <div class="glass kv">
-      <div class="k">الاختبار</div>
-      <div class="v">{{ attempt.quiz.title }}</div>
-    </div>
-
-    <div class="glass kv">
-      <div class="k">النتيجة</div>
-      <div class="v">
-        {% if attempt.is_finished %}
-          <span class="pill g">{{ attempt.score }}</span>
-        {% else %}
-          <span class="pill">—</span>
-          <span class="mut small">لن تظهر النتيجة إلا بعد الإنهاء</span>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="glass kv">
-      <div class="k">وقت البدء</div>
-      <div class="v">{{ attempt.started_at|date:"Y-m-d H:i:s" }}</div>
-    </div>
-
-    <div class="glass kv">
-      <div class="k">وقت الانتهاء</div>
-      <div class="v">
-        {% if attempt.finished_at %}
-          {{ attempt.finished_at|date:"Y-m-d H:i:s" }}
-        {% else %}
-          <span class="mut">—</span>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="glass kv">
-      <div class="k">سبب الإنهاء</div>
-      <div class="v">
-        {% if attempt.is_finished %}
-          {{ attempt.get_finished_reason_display }}
-        {% else %}
-          <span class="mut">—</span>
-        {% endif %}
-      </div>
-    </div>
-
-    <div class="glass kv">
-      <div class="k">مؤشر التقدم</div>
-      <div class="v">
-        <span class="pill">{{ attempt.current_index }}</span>
-        <span class="mut small">السؤال الحالي (0 يعني لم يبدأ/أول سؤال)</span>
-      </div>
-    </div>
+    <div class="it"><div class="k">الحالة</div><div class="v">{% if attempt.is_finished %}منتهي{% else %}جاري{% endif %}</div></div>
+    <div class="it"><div class="k">الدرجة</div><div class="v">{{ attempt.score|default:0 }}</div></div>
+    <div class="it"><div class="k">السبب</div><div class="v">{{ attempt.finished_reason|default:"—" }}</div></div>
+    <div class="it"><div class="k">IP</div><div class="v">{{ attempt.started_ip|default:"—" }}</div></div>
   </div>
 
-  {# Progress bar: answered / total #}
-  {% with total=attempt.questions_total done=attempt.answered_count %}
-    <div class="glass bar">
-      <div class="barrow">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <span class="pill">الإجابات: {{ done }}/{{ total }}</span>
-          {% if attempt.timed_out_count %}
-            <span class="pill r">انتهى الوقت: {{ attempt.timed_out_count }}</span>
-          {% else %}
-            <span class="pill">انتهى الوقت: 0</span>
-          {% endif %}
-        </div>
-        <div class="mut small">
-          {% if total %}
-            {% widthratio done total 100 as pct %}
-            نسبة الإنجاز: {{ pct }}%
-          {% else %}
-            —
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="track" aria-label="progress">
-        {% if total %}
-          {% widthratio done total 100 as pct2 %}
-          <div class="fill" style="width: {{ pct2 }}%"></div>
-        {% else %}
-          <div class="fill" style="width:0%"></div>
-        {% endif %}
-      </div>
-    </div>
-  {% endwith %}
-
-  <div class="glass tbl">
-    <div class="tblhead">
-      <div class="t">تفاصيل الإجابات</div>
-      <div class="mut small">
-        عرض: {{ answers|length }} صف
-      </div>
-    </div>
-
-    <div style="overflow:auto;max-height:52vh">
-      <table>
-        <thead>
+  <div class="tblWrap">
+    <table class="tbl">
+      <thead><tr><th>#</th><th>السؤال</th><th>الإجابة</th></tr></thead>
+      <tbody>
+        {% for x in answers %}
           <tr>
-            <th style="width:72px">#</th>
-            <th>السؤال</th>
-            <th style="width:240px">الإجابة</th>
-            <th style="width:160px">الوقت</th>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ x.question.text }}</td>
+            <td>{% if x.selected_choice %}{{ x.selected_choice.text }}{% else %}—{% endif %}</td>
           </tr>
-        </thead>
-        <tbody>
-          {% for ans in answers %}
-            {% with q=ans.question %}
-              <tr>
-                <td class="mut">
-                  {% if q.order %}{{ q.order }}{% else %}{{ forloop.counter }}{% endif %}
-                </td>
-
-                <td>
-                  <div style="font-weight:1100;line-height:1.9">
-                    {{ q.text }}
-                  </div>
-                </td>
-
-                <td>
-                  <div class="ans">
-                    {% if ans.selected_choice %}
-                      <div class="pick">
-                        {{ ans.selected_choice.text }}
-                        {% if ans.selected_choice.is_correct %}
-                          <span class="ok">✓</span>
-                        {% else %}
-                          <span class="bad">✕</span>
-                        {% endif %}
-                      </div>
-                      <div class="meta2">
-                        {% if ans.selected_choice.is_correct %}
-                          إجابة صحيحة
-                        {% else %}
-                          إجابة خاطئة
-                        {% endif %}
-                      </div>
-                    {% else %}
-                      <div class="pick mut">بدون إجابة</div>
-                      <div class="meta2">إما لم يحدد خيارًا أو انتهى الوقت</div>
-                    {% endif %}
-                  </div>
-                </td>
-
-                <td class="small">
-                  <div class="mut">بدء: {{ ans.started_at|date:"H:i:s" }}</div>
-                  <div class="mut">
-                    {% if ans.answered_at %}
-                      إجابة: {{ ans.answered_at|date:"H:i:s" }}
-                    {% else %}
-                      إجابة: —
-                    {% endif %}
-                  </div>
-                </td>
-              </tr>
-            {% endwith %}
-          {% empty %}
-            <tr>
-              <td colspan="4" class="mut" style="text-align:center;padding:14px">
-                لا توجد إجابات مسجلة لهذه المحاولة حتى الآن.
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-    <div class="mut small" style="margin-top:10px;line-height:1.8">
-      * ملاحظة: ظهور “بدون إجابة” قد يعني انتهاء الوقت أو عدم اختيار خيار قبل الانتقال.
-    </div>
+        {% empty %}
+          <tr><td colspan="3" class="empty">لا توجد إجابات.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
+
+<style>
+  .panel{background:#fff;border:1px solid rgba(231,238,246,.95);border-radius:18px;padding:12px}
+  .hd .t{font-weight:1200}
+  .hd .s{margin-top:4px;color:var(--mut);font-weight:1000}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+  @media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+  .it{border:1px solid rgba(231,238,246,.95);border-radius:14px;padding:10px;background:#fafcff}
+  .k{font-size:12px;color:var(--mut);font-weight:1100}
+  .v{margin-top:6px;font-weight:1200}
+  .tblWrap{margin-top:10px;border-radius:14px;border:1px solid rgba(231,238,246,.95);overflow:auto}
+  .tbl{width:100%;border-collapse:separate;border-spacing:0;min-width:700px}
+  .tbl thead th{background:#f8fafc;border-bottom:1px solid rgba(15,23,42,.08);padding:10px;font-size:12px;font-weight:1200}
+  .tbl tbody td{border-bottom:1px solid rgba(15,23,42,.06);padding:10px;font-weight:1000;font-size:12.8px}
+  .empty{text-align:center;color:var(--mut);font-weight:1100}
+</style>
