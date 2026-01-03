@@ -1,4 +1,4 @@
-# quiz/views.py  (استبدله بالكامل) ✅ صارم في ربط الأسئلة بالمجال + اختيار مجال + يمنع أكثر من اختبار
+# quiz/views.py  (استبدله بالكامل)
 from __future__ import annotations
 
 import csv
@@ -244,7 +244,6 @@ def _get_or_create_quiz_for_domain(domain: str) -> Quiz:
     """
     title = _quiz_title_for_domain(domain)
     if not title:
-        # دفاعي: لا نكمل بدون عنوان
         raise ValueError("تعذر تحديد عنوان الاختبار للمجال.")
 
     q = Quiz.objects.filter(title=title).order_by("-id").first()
@@ -383,9 +382,11 @@ def login_view(request: HttpRequest) -> HttpResponse:
         return redirect("quiz:login")
 
     # ✅ إذا سبق وأنه بدأ/أنهى اختبارًا: ممنوع دخول أي اختبار آخر
+    # (مسموح فقط بالعودة لنفس المحاولة لو كانت مفتوحة — هذا يتم في confirm/question)
     if getattr(p, "has_taken_exam", False):
-        messages.error(request, "تم تنفيذ الاختبار مسبقًا ولا يمكن دخول اختبار آخر.")
-        return redirect("quiz:finish")
+        # لا نوجهه مباشرة للـ finish لأن قد يكون عنده محاولة مفتوحة (نخليه يمر عبر confirm)
+        # لكن لو ما عنده أي محاولة مفتوحة لاحقاً سيُمنع
+        pass
 
     allowed_domains = list(
         Enrollment.objects.filter(participant=p, is_allowed=True).values_list("domain", flat=True)
@@ -445,11 +446,6 @@ def choose_domain_view(request: HttpRequest) -> HttpResponse:
 
     p = get_object_or_404(Participant, id=pid)
 
-    # ✅ إذا سبق وأنه بدأ/أنهى اختبارًا: ممنوع
-    if getattr(p, "has_taken_exam", False):
-        messages.error(request, "تم تنفيذ الاختبار مسبقًا ولا يمكن دخول اختبار آخر.")
-        return redirect("quiz:finish")
-
     locked = _norm(getattr(p, "locked_domain", "")).lower()
     if locked:
         request.session["selected_domain"] = locked
@@ -465,7 +461,6 @@ def choose_domain_view(request: HttpRequest) -> HttpResponse:
         )
         open_domains = [d for d in allowed_domains if _is_in_window(d)]
 
-    # لا يوجد شيء مفتوح
     if not open_domains:
         messages.error(request, "لا يوجد اختبار متاح الآن لك (خارج النوافذ الزمنية).")
         return redirect("quiz:login")
@@ -475,9 +470,6 @@ def choose_domain_view(request: HttpRequest) -> HttpResponse:
         dom = _norm(open_domains[0]).lower()
         with transaction.atomic():
             p2 = Participant.objects.select_for_update().get(id=p.id)
-            if getattr(p2, "has_taken_exam", False):
-                messages.error(request, "تم تنفيذ الاختبار مسبقًا ولا يمكن دخول اختبار آخر.")
-                return redirect("quiz:finish")
             if not _norm(getattr(p2, "locked_domain", "")).lower():
                 p2.locked_domain = dom
                 p2.locked_at = _now()
@@ -497,9 +489,6 @@ def choose_domain_view(request: HttpRequest) -> HttpResponse:
 
     with transaction.atomic():
         p2 = Participant.objects.select_for_update().get(id=p.id)
-        if getattr(p2, "has_taken_exam", False):
-            messages.error(request, "تم تنفيذ الاختبار مسبقًا ولا يمكن دخول اختبار آخر.")
-            return redirect("quiz:finish")
         if not _norm(getattr(p2, "locked_domain", "")).lower():
             p2.locked_domain = dom
             p2.locked_at = _now()
@@ -527,14 +516,8 @@ def confirm_view(request: HttpRequest) -> HttpResponse:
 
     p = get_object_or_404(Participant, id=pid)
 
-    # ✅ منع أي اختبار إذا سبق أن بدأ/أنهى اختبارًا
-    if getattr(p, "has_taken_exam", False):
-        messages.error(request, "تم تنفيذ الاختبار مسبقًا ولا يمكن دخول اختبار آخر.")
-        return redirect("quiz:finish")
-
     domain = _norm(domain).lower()
     if not domain:
-        # لم يحدد مجال بعد
         return redirect("quiz:choose_domain")
 
     if domain not in VALID_DOMAINS:
@@ -579,10 +562,12 @@ def confirm_view(request: HttpRequest) -> HttpResponse:
             },
         )
 
+    # =========================
     # POST: موافقة
+    # =========================
     request.session[SESSION_CONFIRMED] = True
 
-    # ✅ اقفل المجال فقط (بدون رفع has_taken_exam هنا)
+    # اقفل المجال لو لم يكن مقفولاً
     if not locked:
         p.locked_domain = domain
         p.locked_at = _now()
@@ -592,20 +577,40 @@ def confirm_view(request: HttpRequest) -> HttpResponse:
         messages.error(request, "لا توجد نافذة اختبار نشطة الآن لهذا المجال.")
         return redirect("quiz:confirm")
 
+    # ✅ إذا لديه محاولة مفتوحة لنفس المجال/الاختبار -> يكملها (حتى لو has_taken_exam=True)
     a = (
         Attempt.objects.filter(participant=p, domain=domain, quiz=quiz, is_finished=False)
         .order_by("-started_at", "-id")
         .first()
     )
-    if not a:
+    if a:
+        request.session[SESSION_ATTEMPT_ID] = a.id
+        return redirect("quiz:question")
+
+    # ✅ لا يوجد Attempt مفتوح: هنا هو بدء الاختبار فعلياً
+    # - إن كان has_taken_exam=True -> ممنوع إنشاء محاولة جديدة
+    if getattr(p, "has_taken_exam", False):
+        messages.error(request, "تم تنفيذ الاختبار مسبقًا ولا يمكن إنشاء محاولة جديدة.")
+        return redirect("quiz:finish")
+
+    # ✅ إنشاء Attempt جديد + رفع has_taken_exam=True مرة واحدة فقط
+    with transaction.atomic():
+        p2 = Participant.objects.select_for_update().get(id=p.id)
+        if getattr(p2, "has_taken_exam", False):
+            messages.error(request, "تم تنفيذ الاختبار مسبقًا ولا يمكن إنشاء محاولة جديدة.")
+            return redirect("quiz:finish")
+
         a = Attempt.objects.create(
-            participant=p,
+            participant=p2,
             quiz=quiz,
             domain=domain,
             session_key=_norm(getattr(request.session, "session_key", "")) or _norm(request.session.session_key),
             started_ip=request.META.get("REMOTE_ADDR"),
             user_agent=_norm(request.META.get("HTTP_USER_AGENT"))[:255] or None,
         )
+
+        p2.has_taken_exam = True
+        p2.save(update_fields=["has_taken_exam"])
 
     request.session[SESSION_ATTEMPT_ID] = a.id
     return redirect("quiz:question")
@@ -622,20 +627,16 @@ def question_view(request: HttpRequest) -> HttpResponse:
 
     a = get_object_or_404(Attempt.objects.select_related("participant", "quiz"), id=attempt_id)
 
+    # ✅ حماية إضافية: لا تسمح بمحاولة ليست لهذا المستخدم
+    if int(a.participant_id) != int(pid):
+        messages.error(request, "جلسة غير صالحة. أعد تسجيل الدخول.")
+        return redirect("quiz:login")
+
     if a.is_finished:
         return redirect("quiz:finish")
 
-    # ✅ هنا هو “الدخول الفعلي للاختبار”
-    # - أول وصول لصفحة الأسئلة: نرفع has_taken_exam=True (وبالتالي يمنع أي اختبار آخر)
-    # - نتأكد أن locked_domain يطابق مجال المحاولة
     p = a.participant
     dom = _norm(getattr(a, "domain", "")).lower()
-
-    if getattr(p, "has_taken_exam", False):
-        # إذا سبق أنه بدأ/أنهى اختبارًا: امنع مباشرة
-        messages.error(request, "تم تنفيذ الاختبار مسبقًا ولا يمكن دخول اختبار آخر.")
-        _finish_attempt(a, reason="blocked")
-        return redirect("quiz:finish")
 
     locked = _norm(getattr(p, "locked_domain", "")).lower()
     if locked and locked != dom:
@@ -643,16 +644,11 @@ def question_view(request: HttpRequest) -> HttpResponse:
         _finish_attempt(a, reason="blocked")
         return redirect("quiz:finish")
 
-    # قفل المجال إذا لم يكن مقفولًا
+    # قفل المجال إذا لم يكن مقفولًا (احتياط)
     if not locked:
         p.locked_domain = dom
         p.locked_at = _now()
         p.save(update_fields=["locked_domain", "locked_at"])
-        locked = dom
-
-    # ✅ منع دخول أكثر من اختبار: من هنا نعتبره دخل الاختبار
-    p.has_taken_exam = True
-    p.save(update_fields=["has_taken_exam"])
 
     q = _attempt_current_question(a)
     if not q:
@@ -1030,10 +1026,13 @@ def staff_force_finish_attempt_view(request: HttpRequest, attempt_id: int) -> Ht
 @staff_member_required
 @require_POST
 def staff_reset_attempt_view(request: HttpRequest, attempt_id: int) -> HttpResponse:
-    a = get_object_or_404(Attempt, id=attempt_id)
+    a = get_object_or_404(Attempt.objects.select_related("participant"), id=attempt_id)
 
     with transaction.atomic():
+        # حذف الإجابات
         Answer.objects.filter(attempt=a).delete()
+
+        # إعادة المحاولة
         a.current_index = 0
         a.score = 0
         a.is_finished = False
@@ -1051,7 +1050,14 @@ def staff_reset_attempt_view(request: HttpRequest, attempt_id: int) -> HttpRespo
             ]
         )
 
-    messages.success(request, "تمت إعادة فتح المحاولة بنجاح.")
+        # ✅ إعادة المرشح لحالة قبل الاختبار (للسماح بإعادة المحاولة فعلياً)
+        p = a.participant
+        p.has_taken_exam = False
+        p.locked_domain = ""
+        p.locked_at = None
+        p.save(update_fields=["has_taken_exam", "locked_domain", "locked_at"])
+
+    messages.success(request, "تمت إعادة فتح المحاولة بنجاح (مع إعادة تهيئة حالة المرشح).")
     return redirect("quiz:staff_attempt_detail", attempt_id=a.id)
 
 
@@ -1156,6 +1162,9 @@ def staff_import_questions_view(request: HttpRequest) -> HttpResponse:
 
     preview_only = request.POST.get("preview") in {"1", "on", "true", "yes"}
 
+    # ✅ جديد: تفعيل الاختبار تلقائياً بعد الرفع (اختياري)
+    activate_after_import = request.POST.get("activate") in {"1", "on", "true", "yes"}
+
     wb = load_workbook(up)
 
     sheets: list[tuple[str, Worksheet]] = []
@@ -1176,7 +1185,6 @@ def staff_import_questions_view(request: HttpRequest) -> HttpResponse:
     try:
         with transaction.atomic():
             for dom, ws in sheets:
-                # ✅ quiz محدد للمجال بعنوان ثابت (هذا يمنع التداخل نهائياً)
                 quiz = _get_or_create_quiz_for_domain(dom)
 
                 if preview_only:
@@ -1195,7 +1203,16 @@ def staff_import_questions_view(request: HttpRequest) -> HttpResponse:
                     continue
 
                 created_q, created_c = _replace_questions_for_quiz(quiz, ws)
-                summary.append(f"{_domain_ar(dom)}: تم الاستبدال — {created_q} سؤال | {created_c} خيار")
+
+                # ✅ تفعيل تلقائي (لو اخترته)
+                if activate_after_import and not quiz.is_active:
+                    quiz.is_active = True
+                    quiz.save(update_fields=["is_active"])
+
+                summary.append(
+                    f"{_domain_ar(dom)}: تم الاستبدال — {created_q} سؤال | {created_c} خيار"
+                    + (" | ✅ تم التفعيل" if activate_after_import else "")
+                )
 
     except Exception as e:
         messages.error(request, f"تعذر الاستيراد: {e}")
