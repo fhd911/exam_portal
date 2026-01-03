@@ -2,214 +2,378 @@
 {% block title %}تأكيد البيانات{% endblock %}
 
 {% block content %}
-<div class="c-wrap">
-  <div class="c-head">
+<div class="wrapx">
+
+  <!-- خطوات -->
+  <div class="steps">
+    <span class="st done"><span class="dot">1</span>الدخول</span>
+    <span class="bar"></span>
+    <span class="st active"><span class="dot">2</span>الإقرار</span>
+    <span class="bar"></span>
+    <span class="st"><span class="dot">3</span>الاختبار</span>
+  </div>
+
+  <div class="head">
     <div>
-      <h2 class="c-title">تأكيد البيانات والإقرار</h2>
-      <p class="c-sub">راجع بياناتك ثم وافق على الإقرار للانتقال للاختبار.</p>
+      <h1 class="h1">تأكيد البيانات والإقرار</h1>
+      <p class="p">راجع بياناتك ثم وافق على الإقرار للانتقال للاختبار.</p>
     </div>
 
-    <div class="c-badge">
-      <span class="c-badge-k">المجال</span>
-      <span class="c-badge-v">{{ domain_label|default:"-" }}</span>
+    <div class="meta-chips">
+      <span class="chip chip-soft"><span class="k">المجال</span><span class="v">{{ domain_label|default:"-" }}</span></span>
+      <span class="chip chip-line"><span class="k">الاختبار</span><span class="v">{% if quiz %}{{ quiz.title }}{% else %}—{% endif %}</span></span>
+      <span class="chip chip-line"><span class="k">النافذة</span>
+        <span class="v">
+          {% if window %}
+            {{ window.starts_at|date:"Y-m-d" }} {{ window.starts_at|time:"H:i" }} — {{ window.ends_at|time:"H:i" }}
+          {% else %}
+            غير متاحة الآن
+          {% endif %}
+        </span>
+      </span>
     </div>
   </div>
 
-  {% if messages %}
-    <div class="msgs">
-      {% for m in messages %}
-        <div class="alert {% if m.tags %}{{ m.tags }}{% endif %}">
-          <span class="ic">
-            {% if "success" in m.tags %}✅{% elif "warning" in m.tags %}⚠️{% elif "error" in m.tags %}⛔{% else %}ℹ️{% endif %}
-          </span>
-          <div class="tx">{{ m }}</div>
-        </div>
-      {% endfor %}
+  <!-- ✅ بطاقة المرشح (Compact) -->
+  <div class="cand-strip">
+    <div class="cand-name">
+      <div class="lab">الاسم</div>
+      <div class="name">{{ p.full_name|default:"-" }}</div>
     </div>
-  {% endif %}
+
+    <div class="cand-chips">
+      <span class="mini-chip">
+        <span class="lab2">السجل المدني</span>
+        <span class="val2">
+          {% with nid=p.national_id|default:"" %}
+            {% if nid %}
+              <span class="nid" dir="ltr">
+                {% if nid|length >= 6 %}
+                  {{ nid|slice:":3" }}******{{ nid|slice:"-2:" }}
+                {% else %}
+                  {{ nid }}
+                {% endif %}
+              </span>
+            {% else %}—{% endif %}
+          {% endwith %}
+        </span>
+      </span>
+
+      <span class="mini-chip">
+        <span class="lab2">آخر 4 (الجوال)</span>
+        <span class="val2">
+          {% with p4=p.phone_last4|default:"" %}
+            {% if p4 %}<span class="nid" dir="ltr">{{ p4 }}</span>{% else %}—{% endif %}
+          {% endwith %}
+        </span>
+      </span>
+
+      <span class="mini-chip soft">
+        <span class="lab2">الحالة</span>
+        <span class="val2"><span class="pill ok">معتمد</span></span>
+      </span>
+    </div>
+  </div>
+
+  <!-- جاهزية مختصرة -->
+  <div class="status-line">
+    <div class="sl-title">حالة الجاهزية</div>
+    <div class="sl-badges">
+      <span class="sb ok"><span class="d"></span><b>التحقق</b><span class="mut">تمت المصادقة</span></span>
+      <span class="sb {% if quiz %}ok{% else %}warn{% endif %}"><span class="d"></span><b>اختبار</b><span class="mut">{% if quiz %}متوفر{% else %}غير متوفر{% endif %}</span></span>
+      <span class="sb {% if window %}ok{% else %}warn{% endif %}"><span class="d"></span><b>نافذة</b><span class="mut">{% if window %}مفتوحة{% else %}مغلقة{% endif %}</span></span>
+    </div>
+    <div class="sl-note">
+      {% if quiz and window %}
+        يمكنك البدء الآن.
+      {% else %}
+        لا يمكن البدء حتى تتوفر نافذة زمنية واختبار نشط.
+      {% endif %}
+    </div>
+  </div>
 
   {% if not window %}
     <div class="alert warn">
-      <span class="ic">⏳</span>
-      <div class="tx">
-        لا توجد نافذة اختبار نشطة الآن.
-        {% if next_windows %}
-          <div class="mini">
-            أقرب النوافذ القادمة:
-            <ul class="mini-ul">
-              {% for w in next_windows %}
-                <li>
-                  <b>{{ w.domain_label|default:w.domain }}</b>
-                  — من {{ w.starts_at|date:"Y-m-d" }} {{ w.starts_at|time:"H:i" }}
-                  إلى {{ w.ends_at|time:"H:i" }}
-                </li>
-              {% endfor %}
-            </ul>
-          </div>
-        {% endif %}
-      </div>
+      <span class="aic">⏳</span>
+      <span class="atx">لا توجد نافذة اختبار نشطة الآن — لا يمكن بدء الاختبار حاليًا.</span>
     </div>
   {% endif %}
 
-  <div class="c-grid">
-    <div class="card">
-      <div class="c-sec">
-        <div class="c-sec-title">بيانات المرشح</div>
-
-        <div class="c-kv">
-          <div class="c-row">
-            <div class="c-k">الاسم</div>
-            <div class="c-v">{{ p.full_name|default:"-" }}</div>
-          </div>
-
-          <div class="c-row">
-            <div class="c-k">السجل المدني</div>
-            <div class="c-v">{{ p.national_id|default:"-" }}</div>
-          </div>
-
-          <div class="c-row">
-            <div class="c-k">آخر 4 أرقام (الجوال)</div>
-            <div class="c-v">{{ p.phone_last4|default:"-" }}</div>
-          </div>
-
-          <div class="c-row">
-            <div class="c-k">الاختبار</div>
-            <div class="c-v">{% if quiz %}{{ quiz.title }}{% else %}—{% endif %}</div>
-          </div>
-
-          <div class="c-row">
-            <div class="c-k">النافذة الحالية</div>
-            <div class="c-v">
-              {% if window %}
-                من {{ window.starts_at|date:"Y-m-d" }} {{ window.starts_at|time:"H:i" }}
-                إلى {{ window.ends_at|time:"H:i" }}
-              {% else %}
-                —
-              {% endif %}
-            </div>
-          </div>
+  <!-- ✅ جداول: الإقرار + التنبيهات -->
+  <div class="grid">
+    <!-- الإقرار -->
+    <section class="card pad">
+      <div class="ch">
+        <div>
+          <div class="ct">الإقرار</div>
+          <div class="cs">الموافقة شرط للانتقال للاختبار.</div>
         </div>
+        <div class="badge">إقرار</div>
+      </div>
 
-        <div class="c-note">
-          <span class="c-ic">⏱️</span>
-          <div class="c-note-tx">
-            {% if quiz and quiz.per_question_seconds %}
-              لكل سؤال <b>{{ quiz.per_question_seconds }} ثانية</b>.
-            {% else %}
-              لكل سؤال <b>50 ثانية</b>.
-            {% endif %}
-            عند انتهاء الوقت سيتم الانتقال تلقائياً للسؤال التالي.
+      <div class="tbl">
+        <div class="tr">
+          <div class="td k">صحة البيانات</div>
+          <div class="td v">أقر بأن البيانات أعلاه صحيحة.</div>
+        </div>
+        <div class="tr">
+          <div class="td k">الموافقة</div>
+          <div class="td v">أوافق على الدخول للاختبار وفق الضوابط.</div>
+        </div>
+        <div class="tr imp">
+          <div class="td k">تنبيه إداري</div>
+          <div class="td v">
+            <b>دخول الاختبار إجراء تنظيمي</b> ولا يعني الترشيح أو القبول للمقابلة، والقرار النهائي لدى الإدارة.
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="card">
-      <div class="c-sec">
-        <div class="c-sec-title">الإقرار</div>
-
-        <ul class="c-bul">
-          <li>أقر بأن البيانات أعلاه صحيحة.</li>
-          <li>أتعهد بعدم الاستعانة بأي وسائل خارجية أثناء الاختبار.</li>
-          <li>أعلم أن النظام يمنع إعادة الاختبار بعد البدء/الإنهاء.</li>
-          <li>أوافق على الانتقال للاختبار الآن.</li>
-        </ul>
-
-        <form method="post" class="c-actions">
+      <div class="act">
+        <form method="post" style="margin:0;">
           {% csrf_token %}
           <input type="hidden" name="agree" value="1">
-
           {% if quiz and window %}
-            <button class="btn" type="submit">أوافق وأبدأ الاختبار</button>
+            <button class="btn btn-primary" type="submit">أوافق وأبدأ الاختبار</button>
           {% else %}
             <button class="btn disabled" type="button" disabled>لا يمكن بدء الاختبار الآن</button>
           {% endif %}
-
-          <a class="btn secondary" href="{% url 'quiz:logout' %}">خروج</a>
         </form>
 
-        <div class="c-muted">
-          إذا كانت بياناتك غير صحيحة، تواصل مع الإدارة قبل بدء الاختبار.
+        <form method="post" action="{% url 'quiz:logout' %}" style="margin:0;">
+          {% csrf_token %}
+          <button class="btn btn-danger" type="submit">خروج</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- التنبيهات -->
+    <section class="card pad">
+      <div class="ch">
+        <div>
+          <div class="ct">التنبيهات</div>
+          <div class="cs">إرشادات مهمة قبل وأثناء الاختبار.</div>
+        </div>
+        <div class="badge badge2">تنبيهات</div>
+      </div>
+
+      <div class="tbl">
+        <div class="tr">
+          <div class="td k">مدة السؤال</div>
+          <div class="td v">
+            لكل سؤال <b>{% if quiz and quiz.per_question_seconds %}{{ quiz.per_question_seconds }}{% else %}50{% endif %}</b> ثانية.
+          </div>
+        </div>
+        <div class="tr">
+          <div class="td k">الانتقال التلقائي</div>
+          <div class="td v">عند انتهاء زمن السؤال سيتم الانتقال تلقائيًا للسؤال التالي.</div>
+        </div>
+        <div class="tr warn2">
+          <div class="td k">عدم الاستعانة</div>
+          <div class="td v">يمنع الاستعانة بأي وسائل خارجية أثناء الاختبار.</div>
         </div>
       </div>
-    </div>
+
+      <div class="note2">
+        <div class="n2ic">ℹ️</div>
+        <div class="n2tx">إذا كانت بياناتك غير صحيحة، تواصل مع الإدارة قبل بدء الاختبار.</div>
+      </div>
+    </section>
   </div>
+
 </div>
 {% endblock %}
 
 {% block base_css_extra %}
-  .c-wrap{max-width:1050px;margin:0 auto}
-  .c-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;margin:6px 0 14px}
-  .c-title{margin:0;font-size:18px;font-weight:1000}
-  .c-sub{margin:6px 0 0;color:var(--mut);font-weight:800;line-height:1.9;font-size:13px}
-
-  .c-badge{
-    display:flex;gap:8px;align-items:center;
-    padding:10px 12px;border-radius:999px;
-    background:rgba(14,165,164,.08);
-    border:1px solid rgba(14,165,164,.16);
-    font-weight:1000;
+  :root{
+    --ok-bg: rgba(34,197,94,.08);
+    --ok-bd: rgba(34,197,94,.18);
+    --warn-bg: rgba(245,158,11,.10);
+    --warn-bd: rgba(245,158,11,.22);
   }
-  .c-badge-k{color:var(--mut);font-size:12px}
-  .c-badge-v{color:var(--ink)}
 
-  .msgs{display:flex;flex-direction:column;gap:10px;margin:10px 0}
+  .wrapx{max-width:1100px;margin:0 auto}
+  .h1{margin:0;font-size:18px;font-weight:800}
+  .p{margin:6px 0 0;color:var(--mut);font-weight:600;line-height:1.9;font-size:13px}
 
-  .alert{
-    display:flex;gap:10px;align-items:flex-start;
+  /* steps */
+  .steps{
+    display:flex;align-items:center;gap:10px;
+    margin:6px 0 12px;
     padding:10px 12px;border-radius:16px;
     border:1px solid rgba(231,238,246,.95);
-    background: rgba(255,255,255,.86);
-    box-shadow: 0 10px 22px rgba(2,44,34,.05);
-    font-weight:900;font-size:13px;line-height:1.9;
+    background:rgba(255,255,255,.88);
+    box-shadow:0 10px 22px rgba(15,23,42,.05);
   }
-  .alert .ic{
-    width:30px;height:30px;border-radius:12px;
+  .st{display:flex;align-items:center;gap:8px;font-weight:650;font-size:12px;color:var(--mut)}
+  .dot{
+    width:24px;height:24px;border-radius:10px;
     display:flex;align-items:center;justify-content:center;
-    flex:0 0 auto;border:1px solid rgba(2,6,23,.08);background:#fff;
+    border:1px solid rgba(231,238,246,.95);
+    background:#fff;color:var(--mut);
+    font-weight:800;font-size:12px;
   }
-  .alert.success{border-color:rgba(34,197,94,.25);background:rgba(240,253,244,.9)}
-  .alert.info{border-color:rgba(59,130,246,.22);background:rgba(239,246,255,.9)}
-  .alert.warning,
-  .alert.warn{border-color:rgba(245,158,11,.25);background:rgba(255,251,235,.9)}
-  .alert.error,
-  .alert.danger{border-color:rgba(239,68,68,.25);background:rgba(254,242,242,.9)}
+  .st.done .dot{background:var(--ok-bg);border-color:var(--ok-bd);color:#166534}
+  .st.active{color:var(--txt)}
+  .st.active .dot{background:rgba(2,132,199,.10);border-color:rgba(2,132,199,.20);color:#0b3a6a}
+  .bar{flex:1;height:1px;background:rgba(120,140,160,.18)}
 
-  .alert .tx{color:var(--ink)}
-  .alert .mini{margin-top:8px;color:var(--mut);font-weight:800}
-  .mini-ul{margin:6px 0 0;padding:0 18px;line-height:2}
-
-  .c-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:12px}
-  @media (max-width:900px){.c-grid{grid-template-columns:1fr}}
-
-  .c-sec-title{font-weight:1000;margin-bottom:12px;color:var(--ink)}
-  .c-kv{display:flex;flex-direction:column;gap:0}
-  .c-row{
-    display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
-    padding:10px 0;border-bottom:1px dashed rgba(120,140,160,.25)
+  /* head chips */
+  .head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:0 0 10px}
+  .meta-chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+  .chip{
+    display:inline-flex;gap:8px;align-items:center;
+    padding:7px 10px;border-radius:999px;
+    border:1px solid rgba(231,238,246,.95);
+    background:#fff;
+    font-weight:650;font-size:12px;
   }
-  .c-row:last-child{border-bottom:0}
-  .c-k{color:var(--mut);font-weight:1000;font-size:12px}
-  .c-v{font-weight:1000}
+  .chip-soft{border-color:rgba(14,165,164,.16);background:rgba(14,165,164,.08)}
+  .chip .k{color:var(--mut);font-weight:600;font-size:12px}
+  .chip .v{color:var(--txt);font-weight:650;font-size:12px}
 
-  .c-note{
-    margin-top:12px;
-    display:flex;gap:10px;align-items:flex-start;
-    padding:10px 12px;border-radius:18px;
-    background:rgba(2,132,199,.06);
-    border:1px solid rgba(2,132,199,.14);
+  /* ✅ Candidate strip (أخف من card) */
+  .cand-strip{
+    border:1px solid rgba(231,238,246,.95);
+    background:rgba(255,255,255,.90);
+    border-radius:18px;
+    padding:10px 12px;
+    box-shadow:0 10px 22px rgba(15,23,42,.05);
+    display:flex;gap:12px;align-items:center;justify-content:space-between;
+    margin:0 0 10px;
   }
-  .c-ic{
+  @media (max-width:900px){.cand-strip{flex-direction:column;align-items:stretch}}
+  .cand-name{flex:1;min-width:260px}
+  .lab{color:var(--mut);font-weight:600;font-size:12px}
+  .name{
+    margin-top:6px;
+    font-size:15.5px;
+    font-weight:600;  /* ✅ أخف جدًا */
+    letter-spacing:.1px;
+    text-align:right;
+  }
+  .cand-chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start;align-items:center}
+
+  .mini-chip{
+    background:#fff;border:1px solid rgba(231,238,246,.95);
+    border-radius:999px;
+    padding:7px 10px;
+    display:inline-flex;gap:8px;align-items:center;
+    min-height:38px;
+  }
+  .mini-chip.soft{background:var(--ok-bg);border-color:var(--ok-bd)}
+  .lab2{color:var(--mut);font-weight:600;font-size:12px}
+  .val2{font-weight:600;font-size:12.5px} /* ✅ أخف */
+  .nid{
+    direction:ltr;unicode-bidi:isolate;
+    display:inline-flex;align-items:center;
+    padding:5px 9px;border-radius:999px;
+    border:1px solid rgba(231,238,246,.95);
+    background:rgba(255,255,255,.95);
+    font-weight:600; /* ✅ أخف */
+    letter-spacing:.6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .pill{
+    padding:5px 9px;border-radius:999px;
+    border:1px solid rgba(231,238,246,.95);
+    background:#fff;font-weight:650;font-size:12px;
+  }
+  .pill.ok{background:var(--ok-bg);border-color:var(--ok-bd);color:#166534}
+
+  /* status line */
+  .status-line{
+    border:1px solid rgba(231,238,246,.95);
+    background:rgba(255,255,255,.88);
+    border-radius:18px;
+    padding:12px;
+    box-shadow:0 10px 22px rgba(15,23,42,.05);
+    margin:0 0 10px;
+  }
+  .sl-title{font-weight:750;font-size:13px;margin-bottom:10px}
+  .sl-badges{display:flex;gap:8px;flex-wrap:wrap}
+  .sb{
+    display:inline-flex;gap:8px;align-items:center;
+    padding:7px 10px;border-radius:999px;
+    border:1px solid rgba(231,238,246,.95);
+    background:#fff;
+    font-weight:650;font-size:12px;
+  }
+  .sb .d{width:9px;height:9px;border-radius:99px;background:#94a3b8}
+  .sb.ok{background:var(--ok-bg);border-color:var(--ok-bd);color:#166534}
+  .sb.ok .d{background:#22c55e}
+  .sb.warn{background:rgba(245,158,11,.10);border-color:rgba(245,158,11,.22);color:#7a4a00}
+  .sb.warn .d{background:#f59e0b}
+  .sl-note{margin-top:8px;color:var(--mut);font-weight:600;font-size:12.5px;line-height:1.8}
+
+  /* alert */
+  .alert{
+    display:flex;gap:10px;align-items:center;
+    padding:10px 12px;border-radius:16px;
+    border:1px solid rgba(231,238,246,.95);
+    background:rgba(255,255,255,.88);
+    box-shadow:0 10px 22px rgba(15,23,42,.05);
+    margin:0 0 10px;
+    font-weight:650;font-size:12.8px;
+  }
+  .alert.warn{border-color:var(--warn-bd);background:rgba(255,251,235,.92)}
+  .aic{
     width:28px;height:28px;border-radius:12px;
     display:flex;align-items:center;justify-content:center;
-    background:#fff;border:1px solid rgba(2,132,199,.18);
+    background:#fff;border:1px solid rgba(2,6,23,.08);
     flex:0 0 auto;
   }
-  .c-note-tx{font-weight:900;line-height:1.9;color:var(--ink)}
 
-  .c-bul{margin:0;padding:0 18px;line-height:2;font-weight:900;color:var(--ink)}
-  .c-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-  .c-muted{margin-top:10px;color:var(--mut);font-weight:800;line-height:1.8;font-size:12.5px}
+  /* grid */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+  .pad{padding:14px}
+  .ch{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}
+  .ct{font-weight:750}
+  .cs{margin-top:4px;color:var(--mut);font-weight:600;font-size:12.5px;line-height:1.8}
+  .badge{
+    padding:7px 10px;border-radius:999px;
+    background:rgba(2,132,199,.08);
+    border:1px solid rgba(2,132,199,.16);
+    font-weight:650;font-size:12px;white-space:nowrap;
+  }
+  .badge2{background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.16)}
 
+  /* table */
+  .tbl{
+    border:1px solid rgba(231,238,246,.95);
+    background:#fff;
+    border-radius:16px;
+    overflow:hidden;
+  }
+  .tr{
+    display:grid;
+    grid-template-columns:150px 1fr; /* ✅ أضيق */
+    gap:12px;
+    padding:9px 12px; /* ✅ أخف */
+    border-bottom:1px dashed rgba(120,140,160,.18)
+  }
+  .tr:last-child{border-bottom:0}
+  @media (max-width:650px){.tr{grid-template-columns:1fr}}
+  .td.k{color:var(--mut);font-weight:650;font-size:12px}
+  .td.v{font-weight:600;font-size:12.8px;line-height:1.9}
+  .tr.imp{background:rgba(245,158,11,.08)}
+  .tr.warn2{background:rgba(217,45,32,.05)}
+
+  .act{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
   .btn.disabled{opacity:.55;cursor:not-allowed;filter:saturate(.7)}
+
+  .note2{
+    margin-top:10px;
+    display:flex;gap:10px;align-items:flex-start;
+    padding:10px 12px;border-radius:16px;
+    background:rgba(59,130,246,.06);
+    border:1px solid rgba(59,130,246,.14);
+  }
+  .n2ic{
+    width:28px;height:28px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    background:#fff;border:1px solid rgba(2,6,23,.08);
+    flex:0 0 auto;
+  }
+  .n2tx{font-weight:600;line-height:1.9;font-size:12.8px}
 {% endblock %}

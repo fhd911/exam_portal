@@ -1,0 +1,183 @@
+/* =========================================
+   Admin Staff-like (SAFE)
+   - يغيّر الخط/الألوان/الأزرار فقط
+   - لا يلمس layout الأساسي للـ admin
+========================================= */
+
+:root{
+  --adm-ff:"Cairo",system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+  --adm-bg:#f7f9fc;
+  --adm-txt:#0f172a;
+  --adm-mut:#607185;
+  --adm-line:#e7eef6;
+  --adm-shadow:0 10px 28px rgba(15,23,42,.08);
+
+  --adm-btn:#0b3a6a;
+  --adm-btn2:#0f4c81;
+
+  --adm-danger:#b42318;
+  --adm-danger2:#d92d20;
+}
+
+/* Font + background */
+html, body{
+  font-family: var(--adm-ff) !important;
+}
+body{
+  background: var(--adm-bg) !important;
+  color: var(--adm-txt) !important;
+}
+
+/* Header (Django admin top) */
+#header{
+  background: linear-gradient(135deg, var(--adm-btn), #11a3c7) !important;
+  color:#fff !important;
+  box-shadow: 0 10px 22px rgba(17,163,199,.18);
+}
+#header a:link, #header a:visited{
+  color:#fff !important;
+  text-decoration:none !important;
+}
+
+/* Content wrapper */
+#content{
+  padding-top: 18px !important;
+}
+#container{
+  background: transparent !important;
+}
+
+/* Breadcrumbs */
+div.breadcrumbs{
+  background: rgba(255,255,255,.92) !important;
+  border: 1px solid var(--adm-line) !important;
+  color: var(--adm-mut) !important;
+  border-radius: 14px;
+  margin: 14px auto 10px;
+  max-width: 1180px;
+  box-shadow: 0 8px 18px rgba(15,23,42,.05);
+}
+div.breadcrumbs a{
+  color: var(--adm-btn2) !important;
+  font-weight: 800;
+}
+
+/* Main content width like staff */
+#content-main, #content-related, .content{
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Modules / boxes */
+.module, .inline-group, fieldset, .aligned{
+  background: rgba(255,255,255,.92) !important;
+  border: 1px solid var(--adm-line) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 28px rgba(15,23,42,.06);
+}
+.module h2, .module caption, fieldset h2{
+  font-family: var(--adm-ff) !important;
+  font-weight: 1000 !important;
+  color: var(--adm-txt) !important;
+}
+
+/* Tables */
+#result_list{
+  border-radius: 14px;
+  overflow: hidden;
+}
+#result_list thead th{
+  font-weight: 1000 !important;
+  color: var(--adm-mut) !important;
+}
+#result_list tbody td, #result_list tbody th{
+  font-size: 12px;
+}
+
+/* Forms */
+input, select, textarea{
+  font-family: var(--adm-ff) !important;
+  border-radius: 12px !important;
+  border-color: rgba(148,163,184,.35) !important;
+}
+input:focus, select:focus, textarea:focus{
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(17,163,199,.18) !important;
+  border-color: rgba(17,163,199,.45) !important;
+}
+
+/* Django buttons */
+.button, input[type=submit], input[type=button], .submit-row input, a.button{
+  font-family: var(--adm-ff) !important;
+  border-radius: 12px !important;
+  font-weight: 900 !important;
+}
+.button.default, input[type=submit].default{
+  background: linear-gradient(135deg,var(--adm-btn),var(--adm-btn2)) !important;
+  border: 0 !important;
+}
+
+/* Custom branding block */
+.adm-brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.adm-logo{
+  width:36px;height:36px;
+  border-radius:12px;
+  background: rgba(255,255,255,.18);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight: 1000;
+}
+.adm-brand-title{
+  font-weight: 1000;
+  letter-spacing: .2px;
+  font-size: 14px;
+}
+.adm-brand-sub{
+  font-size: 11px;
+  opacity:.9;
+}
+
+/* Top actions (nav-global) */
+.adm-top-actions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-top: 8px;
+}
+.adm-form{margin:0}
+.adm-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.35);
+  background: rgba(255,255,255,.12);
+  color:#fff;
+  font-weight: 900;
+  text-decoration:none;
+  cursor:pointer;
+}
+.adm-btn:hover{
+  filter: brightness(1.05);
+}
+.adm-btn-danger{
+  background: linear-gradient(135deg,var(--adm-danger),var(--adm-danger2));
+  border-color: transparent;
+}
+
+/* RTL tweaks */
+body.rtl #header #user-tools{
+  float:left !important;
+  text-align:left !important;
+}
+body.rtl #header #branding{
+  float:right !important;
+}

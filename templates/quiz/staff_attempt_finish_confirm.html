@@ -1,0 +1,65 @@
+{% extends "quiz/base.html" %}
+{% load static %}
+
+{% block title %}تأكيد إنهاء المحاولة{% endblock %}
+
+{% block content %}
+<div class="wrap" style="max-width:980px;margin:0 auto;">
+  <div class="glass" style="
+    background:rgba(255,255,255,.86);
+    border:1px solid rgba(231,238,246,.95);
+    border-radius:18px;
+    padding:18px;
+    box-shadow:0 10px 30px rgba(0,0,0,.06);
+  ">
+
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div>
+        <h1 style="margin:0;font-size:18px;font-weight:900;">تأكيد إنهاء المحاولة إدارياً</h1>
+        <p style="margin:6px 0 0;color:#5b6b7a;line-height:1.9;">
+          سيتم إغلاق المحاولة فوراً وتسجيل سبب الإنهاء <b>forced</b>.
+        </p>
+      </div>
+
+      <a class="btn" href="{% url 'quiz:staff_attempt_detail' a.id %}"
+         style="text-decoration:none;white-space:nowrap;">
+        الرجوع للتفاصيل
+      </a>
+    </div>
+
+    <hr style="border:none;border-top:1px solid rgba(180,190,205,.35);margin:14px 0;">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="padding:10px 12px;border:1px dashed rgba(120,140,160,.35);border-radius:14px;">
+        <div style="font-size:12px;color:#6b7a89;">المرشح</div>
+        <div style="font-weight:900;">{{ a.participant.full_name }}</div>
+        <div style="color:#6b7a89;font-size:12px;margin-top:2px;">{{ a.participant.national_id }}</div>
+      </div>
+
+      <div style="padding:10px 12px;border:1px dashed rgba(120,140,160,.35);border-radius:14px;">
+        <div style="font-size:12px;color:#6b7a89;">المحاولة</div>
+        <div style="font-weight:900;">#{{ a.id }}</div>
+        <div style="color:#6b7a89;font-size:12px;margin-top:2px;">
+          الحالة: <b>{% if a.is_finished %}منتهية{% else %}جارية{% endif %}</b>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;">
+      <a class="btn" href="{% url 'quiz:staff_attempt_detail' a.id %}"
+         style="text-decoration:none;background:#eef3f8;border:1px solid rgba(160,180,200,.5);color:#233;">
+        إلغاء
+      </a>
+
+      <form method="post" action="{% url 'quiz:staff_attempt_force_finish' a.id %}" style="margin:0;">
+        {% csrf_token %}
+        <button class="btn" type="submit"
+          style="background:linear-gradient(135deg,#0f766e,#22c55e);border:0;color:#fff;">
+          نعم، أنهِ المحاولة الآن
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,48 +1,120 @@
 {% extends "quiz/base.html" %}
-{% block title %}إنهاء الاختبار{% endblock %}
+{% block title %}تم إنهاء الاختبار{% endblock %}
 
 {% block content %}
-<div class="f-wrap">
-  <div class="f-head">
-    <div>
-      <h2 class="f-title">تم إنهاء الاختبار</h2>
-      <p class="f-sub muted">شكرًا لك. يمكنك الآن الخروج.</p>
-    </div>
-    <span class="pill ok"><span class="dot"></span>تم</span>
+<div class="finish-wrap">
+
+  <!-- ✅ مؤشر التقدم -->
+  <div class="steps">
+    <div class="st done"><span class="dot">1</span><span class="tx">الدخول</span></div>
+    <div class="bar"></div>
+    <div class="st done"><span class="dot">2</span><span class="tx">الإقرار</span></div>
+    <div class="bar"></div>
+    <div class="st done"><span class="dot">3</span><span class="tx">الاختبار</span></div>
   </div>
 
-  <div class="card">
-    {% if attempt %}
-      <div class="f-grid">
-        <div class="f-row"><div class="k">الاسم</div><div class="v">{{ attempt.participant.full_name }}</div></div>
-        <div class="f-row"><div class="k">المجال</div><div class="v">{{ attempt.quiz.title }}</div></div>
-        <div class="f-row"><div class="k">الدرجة</div><div class="v">{{ attempt.score|default:"0" }}</div></div>
-        <div class="f-row"><div class="k">الحالة</div><div class="v">{% if attempt.is_finished %}منتهٍ{% else %}—{% endif %}</div></div>
+  <div class="card f-card">
+    <div class="f-hero">
+      <div class="f-ic">✓</div>
+      <div>
+        <h1 class="f-title">تم إنهاء الاختبار</h1>
+        <p class="f-sub">شكرًا لك. تم حفظ إجاباتك بنجاح وسيتم التعامل مع النتائج من قبل الإدارة.</p>
       </div>
-    {% else %}
-      <div class="muted" style="font-weight:1000;line-height:2">
-        لا توجد محاولة مرتبطة بهذه الجلسة.
-      </div>
-    {% endif %}
+    </div>
+
+    <div class="f-note">
+      <div class="n-ic">ℹ️</div>
+      <div class="n-tx">يمكنك الآن تسجيل الخروج. في حال وجود ملاحظة تواصل مع الإدارة.</div>
+    </div>
 
     <div class="f-actions">
-      <a class="btn" href="{% url 'quiz:logout' %}">خروج</a>
+      <form method="post" action="{% url 'quiz:logout' %}" style="margin:0;">
+        {% csrf_token %}
+        <button class="btn btn-danger" type="submit">خروج</button>
+      </form>
+
+      {# إذا ما عندك home.html الأفضل تحويلها إلى login لتجنب أخطاء #}
+      <a class="btn" href="{% url 'quiz:login' %}">العودة</a>
     </div>
   </div>
+
 </div>
 {% endblock %}
 
 {% block base_css_extra %}
-  .f-wrap{max-width:780px;margin:0 auto}
-  .f-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;margin:6px 0 14px}
-  .f-title{margin:0;font-size:18px;font-weight:1000}
-  .f-sub{margin:6px 0 0;font-weight:900}
+  .finish-wrap{max-width:880px;margin:0 auto}
 
-  .f-grid{display:flex;flex-direction:column;gap:0}
-  .f-row{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 0;border-bottom:1px dashed rgba(120,140,160,.25)}
-  .f-row:last-child{border-bottom:0}
-  .k{color:var(--mut);font-weight:1000;font-size:12px}
-  .v{font-weight:1000}
+  /* steps */
+  .steps{
+    display:flex;align-items:center;gap:10px;
+    margin:6px 0 14px;
+    padding:10px 12px;border-radius:16px;
+    border:1px solid rgba(231,238,246,.95);
+    background:rgba(255,255,255,.88);
+    box-shadow:0 10px 22px rgba(15,23,42,.05);
+  }
+  .st{
+    display:flex;align-items:center;gap:8px;
+    font-weight:650; /* ✅ أخف */
+    font-size:12px;
+    color:var(--mut)
+  }
+  .st .dot{
+    width:26px;height:26px;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid rgba(34,197,94,.20);
+    background:rgba(34,197,94,.08);
+    color:#166534;
+    font-weight:750; /* ✅ أخف من 800 */
+    font-size:12px;
+  }
+  .bar{flex:1;height:1px;background:rgba(120,140,160,.18)}
+
+  /* card */
+  .f-card{padding:18px}
+  .f-hero{display:flex;gap:12px;align-items:flex-start}
+  .f-ic{
+    width:44px;height:44px;border-radius:16px;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(34,197,94,.10);
+    border:1px solid rgba(34,197,94,.20);
+    color:#166534;
+    font-weight:850; /* الأيقونة مسموح تكون أثقل */
+    flex:0 0 auto;
+  }
+  .f-title{
+    margin:0;
+    font-size:18px;
+    font-weight:750; /* ✅ أخف */
+    letter-spacing:.2px
+  }
+  .f-sub{
+    margin:6px 0 0;
+    color:var(--mut);
+    font-weight:600; /* ✅ أخف */
+    line-height:1.9;
+    font-size:13px
+  }
+
+  .f-note{
+    margin-top:12px;
+    display:flex;gap:10px;align-items:flex-start;
+    padding:10px 12px;border-radius:16px;
+    background:rgba(59,130,246,.06);
+    border:1px solid rgba(59,130,246,.14);
+  }
+  .n-ic{
+    width:28px;height:28px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    background:#fff;border:1px solid rgba(2,6,23,.08);
+    flex:0 0 auto;
+  }
+  .n-tx{
+    font-weight:600;  /* ✅ بدل 700 */
+    line-height:1.9;
+    font-size:12.8px;
+    color:var(--txt);
+  }
 
   .f-actions{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap}
 {% endblock %}

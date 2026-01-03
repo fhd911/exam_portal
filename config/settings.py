@@ -38,7 +38,6 @@ except Exception:
 # =========================
 DEBUG = env_bool("DJANGO_DEBUG", True)
 
-# ✅ في الإنتاج: لازم Secret Key حقيقي من ENV
 SECRET_KEY = env_str("DJANGO_SECRET_KEY", "")
 if not SECRET_KEY:
     if DEBUG:
@@ -60,7 +59,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
     # ✅ تعريب اسم التطبيق داخل لوحة الإدارة
     "quiz.apps.QuizConfig",
 ]
@@ -71,14 +69,18 @@ INSTALLED_APPS = [
 # =========================
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+
+    # ✅ مهم لعرض static على Render/Production
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+
     "django.contrib.sessions.middleware.SessionMiddleware",
 
-    # ✅ مهم للتعريب والـ RTL في بعض أجزاء لوحة الإدارة
+    # ✅ مهم للتعريب/RTL
     "django.middleware.locale.LocaleMiddleware",
 
     "django.middleware.common.CommonMiddleware",
 
-    # ✅ حارس جلسة الاختبار (بحسب middleware.py لديك)
+    # ✅ حارس جلسة الاختبار
     "quiz.middleware.ExamSessionGuard",
 
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -97,7 +99,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],  # ✅ مهم لملفات admin/base_site.html وغيرها
+        "DIRS": [BASE_DIR / "templates"],  # ✅ مهم لـ templates/admin/base_site.html
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -116,7 +118,6 @@ WSGI_APPLICATION = "config.wsgi.application"
 # =========================
 # Database
 # =========================
-# افتراضي: SQLite محلياً
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -124,8 +125,6 @@ DATABASES = {
     }
 }
 
-# (اختياري) دعم Postgres في Render/Production لو وضعت DATABASE_URL
-# مثال DATABASE_URL: postgres://user:pass@host:5432/dbname
 DATABASE_URL = env_str("DATABASE_URL", "").strip()
 if DATABASE_URL:
     try:
@@ -137,7 +136,6 @@ if DATABASE_URL:
             ssl_require=not DEBUG,
         )
     except Exception:
-        # لو ما ثبتت المكتبة، اترك SQLite كما هو
         pass
 
 
@@ -168,10 +166,11 @@ LOCALE_PATHS = [BASE_DIR / "locale"]
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# WhiteNoise (اختياري - لو تستخدمه)
-# فعّل هذا مع إضافة WhiteNoise middleware لو تبي:
-# MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
-# STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+# ✅ إذا عندك مجلد static في جذر المشروع (BASE_DIR/static) فعّل هذا:
+STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
+
+# ✅ WhiteNoise storage (مهم في الإنتاج)
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -185,9 +184,9 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = int(env_str("DJANGO_HSTS_SECONDS", "60"))  # ارفعها لاحقاً (مثلاً 31536000)
+    SECURE_HSTS_SECONDS = int(env_str("DJANGO_HSTS_SECONDS", "60"))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("DJANGO_HSTS_INCLUDE_SUBDOMAINS", True)
     SECURE_HSTS_PRELOAD = env_bool("DJANGO_HSTS_PRELOAD", True)
 
-    # لو عندك دومين خارجي/Render أضف مثلاً:
+    # لو عندك Render domain ضيفه هنا (مثال):
     # CSRF_TRUSTED_ORIGINS = ["https://your-app.onrender.com"]

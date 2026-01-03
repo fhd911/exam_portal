@@ -1,0 +1,70 @@
+{% extends "quiz/base.html" %}
+{% load static %}
+
+{% block title %}تأكيد إعادة فتح المحاولة{% endblock %}
+
+{% block content %}
+<div class="wrap" style="max-width:980px;margin:0 auto;">
+  <div class="glass" style="
+    background:rgba(255,255,255,.86);
+    border:1px solid rgba(231,238,246,.95);
+    border-radius:18px;
+    padding:18px;
+    box-shadow:0 10px 30px rgba(0,0,0,.06);
+  ">
+
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div>
+        <h1 style="margin:0;font-size:18px;font-weight:900;">تأكيد إعادة فتح المحاولة</h1>
+        <p style="margin:6px 0 0;color:#5b6b7a;line-height:1.9;">
+          سيتم <b>حذف جميع الإجابات</b> وإرجاع المؤشر والدرجة إلى الصفر ثم فتح المحاولة من جديد.
+        </p>
+      </div>
+
+      <a class="btn" href="{% url 'quiz:staff_attempt_detail' a.id %}"
+         style="text-decoration:none;white-space:nowrap;">
+        الرجوع للتفاصيل
+      </a>
+    </div>
+
+    <hr style="border:none;border-top:1px solid rgba(180,190,205,.35);margin:14px 0;">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="padding:10px 12px;border:1px dashed rgba(120,140,160,.35);border-radius:14px;">
+        <div style="font-size:12px;color:#6b7a89;">المرشح</div>
+        <div style="font-weight:900;">{{ a.participant.full_name }}</div>
+        <div style="color:#6b7a89;font-size:12px;margin-top:2px;">{{ a.participant.national_id }}</div>
+      </div>
+
+      <div style="padding:10px 12px;border:1px dashed rgba(120,140,160,.35);border-radius:14px;">
+        <div style="font-size:12px;color:#6b7a89;">المحاولة</div>
+        <div style="font-weight:900;">#{{ a.id }}</div>
+        <div style="color:#6b7a89;font-size:12px;margin-top:2px;">
+          الدرجة الحالية: <b>{{ a.score|default:0 }}</b>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;padding:12px;border-radius:14px;background:rgba(255, 234, 234, .7);
+                border:1px solid rgba(255, 160, 160, .5);color:#7a1f1f;line-height:1.9;">
+      تنبيه: هذا الإجراء لا يمكن التراجع عنه لأنه يحذف الإجابات نهائيًا.
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px;">
+      <a class="btn" href="{% url 'quiz:staff_attempt_detail' a.id %}"
+         style="text-decoration:none;background:#eef3f8;border:1px solid rgba(160,180,200,.5);color:#233;">
+        إلغاء
+      </a>
+
+      <form method="post" action="{% url 'quiz:staff_attempt_reset' a.id %}" style="margin:0;">
+        {% csrf_token %}
+        <button class="btn" type="submit"
+          style="background:linear-gradient(135deg,#b42318,#e11d48);border:0;color:#fff;">
+          نعم، أعد فتح المحاولة
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

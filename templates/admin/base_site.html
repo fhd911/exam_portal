@@ -1,190 +1,102 @@
-{# templates/admin/base_site.html #}
 {% extends "admin/base.html" %}
 {% load static i18n %}
 
 {# =========================
    Title
    ========================= #}
-{% block title %}لوحة الإدارة | {{ site_title|default:_('Django site admin') }}{% endblock %}
+{% block title %}لوحة الإدارة | {{ site_title|default:_("Django site admin") }}{% endblock %}
 
 {# =========================
-   Branding
+   Styles (Cairo + RTL + small polish)
    ========================= #}
-{% block branding %}
-  <h1 id="site-name" style="margin:0;">
-    <a href="{% url 'admin:index' %}"
-       style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;">
-      <span style="font-weight:900;">لوحة إدارة نظام الاختبارات</span>
-    </a>
-  </h1>
-{% endblock %}
-
-{% block nav-global %}{% endblock %}
-
-{# =========================
-   Extra Head (RTL + Cairo + UI + Scroll Fix)
-   ========================= #}
-{% block extrahead %}
+{% block extrastyle %}
   {{ block.super }}
 
-  {# Cairo (Google Fonts) #}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-
-  {# ✅ Custom Admin CSS (app static) #}
-  <link rel="stylesheet" href="{% static 'quiz/custom_admin.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
 
   <style>
     :root{
-      --ff:"Cairo",system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;
-      --shadow: 0 10px 26px rgba(2,44,34,.08);
-      --radius: 16px;
-      --grad: linear-gradient(135deg,#0ea5e9,#22c55e);
+      --ff:"Cairo",system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+
+      --txt:#0f172a;
+      --mut:#607185;
+      --line:#e7eef6;
+
+      --danger:#b42318;
+      --danger2:#d92d20;
     }
 
-    /* =========================
-       ✅ RTL + Base typography
-       ========================= */
-    html, body{ font-family: var(--ff) !important; }
-    body{ direction: rtl; text-align: right; }
+    html,body{font-family:var(--ff)!important}
+    body{direction:rtl}
+    #header, .breadcrumbs, #content, #footer{font-family:var(--ff)!important}
+    #header, .breadcrumbs{direction:rtl}
 
-    #container, #content, #content-main, #content-related,
-    .breadcrumbs, .module, .form-row, fieldset, .aligned{
-      direction: rtl;
-      text-align: right;
+    /* Title weight */
+    #site-name a{font-weight:1000}
+
+    /* Top actions */
+    .admin-top-actions{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-top:8px;
     }
 
-    /* =========================
-       ✅ Scroll Fix (no scroll lock)
-       ========================= */
-    html, body{
-      height: auto !important;
-      min-height: 100% !important;
-      overflow: auto !important;
+    .admin-btn{
+      font-family:var(--ff);
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--txt);
+      padding:7px 10px;
+      border-radius:10px;
+      font-size:12px;
+      font-weight:800;
+      cursor:pointer;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      line-height:1;
     }
+    .admin-btn:hover{filter:brightness(.98)}
+    .admin-btn:active{transform:translateY(1px)}
 
-    /* بعض الثيمات/تعديلات الأدمن تحبس السكرول داخل wrappers */
-    #container, #content, #content-main, #content-related{
-      height: auto !important;
-      min-height: 0 !important;
-      overflow: visible !important;
-    }
-
-    .change-list #content,
-    .change-form #content{
-      overflow: visible !important;
-    }
-
-    /* =========================
-       Header
-       ========================= */
-    #header{
-      background: var(--grad);
+    .admin-btn-danger{
+      border-color:transparent;
+      background:linear-gradient(135deg,var(--danger),var(--danger2));
       color:#fff;
-      border-bottom: 0;
-    }
-    #header a:link, #header a:visited{
-      color:#fff !important;
-      font-weight:900;
-    }
-    #user-tools{ font-weight: 800; }
-
-    /* =========================
-       Breadcrumbs
-       ========================= */
-    .breadcrumbs{
-      direction: rtl;
-      text-align: right;
-    }
-    .breadcrumbs a{ font-weight:900; }
-
-    /* =========================
-       Toolbar
-       ========================= */
-    #toolbar{
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: visible; /* ✅ لا تحبس السكرول */
     }
 
-    /* =========================
-       Modules / Cards
-       ========================= */
-    .module,
-    .dashboard #content-main .module{
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: visible; /* ✅ */
-    }
+    /* Avoid admin default link underline in header */
+    #header a:link, #header a:visited{text-decoration:none}
 
-    /* =========================
-       ChangeList / Tables
-       ========================= */
-    #changelist{ overflow: visible; }
-
-    #changelist table{
-      border-radius: 14px;
-      overflow: hidden; /* ✅ هنا فقط */
-    }
-
-    #changelist table thead th,
-    #changelist table tbody td,
-    #changelist table tbody th{
-      text-align: right !important;
-    }
-
-    /* تحسين قراءة النص داخل القوائم */
-    #changelist table thead th{
-      font-weight: 900;
-      font-size: 13px;
-    }
-    #changelist table tbody td,
-    #changelist table tbody th{
-      font-weight: 700;
-      font-size: 14px;
-    }
-    #changelist table a{
-      font-weight: 900 !important;
-      text-decoration: none !important;
-    }
-
-    /* =========================
-       Buttons
-       ========================= */
-    a.button,
-    input[type=submit],
-    .submit-row input,
-    .object-tools a{
-      border-radius: 12px !important;
-      font-weight: 900 !important;
-    }
-
-    /* =========================
-       Messages
-       ========================= */
-    ul.messagelist li{
-      border-radius: 14px;
-      font-weight: 900;
-    }
-
-    /* =========================
-       Forms RTL tweaks
-       ========================= */
-    .aligned label{
-      float: right;
-      padding-left: 0 !important;
-      padding-right: 10px !important;
-      font-weight: 900;
-    }
-    .aligned .form-row{
-      text-align: right;
-    }
-
-    /* (اختياري) تحسين حقول البحث/الفلترة */
-    #changelist-search input[type="text"]{
-      border-radius: 12px;
-      font-family: var(--ff);
-    }
+    /* Optional: slight subtitle look if you add it later */
+    .admin-sub{color:var(--mut);font-size:11px;margin-top:2px}
   </style>
 {% endblock %}
+
+{# =========================
+   Branding + Actions
+   ========================= #}
+{% block branding %}
+  <h1 id="site-name" style="margin:0;">
+    <a href="{% url 'admin:index' %}" style="text-decoration:none;color:inherit;">
+      لوحة إدارة نظام الاختبارات
+    </a>
+  </h1>
+
+  <div class="admin-top-actions">
+    <a class="admin-btn" href="{% url 'quiz:staff_manage' %}">لوحة الإدارة (Staff)</a>
+
+    {# ✅ Logout Admin الصحيح: لازم POST حتى لا يظهر 405 #}
+    <form method="post" action="{% url 'admin:logout' %}" style="margin:0;display:inline;">
+      {% csrf_token %}
+      <button class="admin-btn admin-btn-danger" type="submit">خروج الإدارة</button>
+    </form>
+  </div>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

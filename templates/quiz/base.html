@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>{% block title %}نظام الاختبار{% endblock %}</title>
+  <title>{% block title %}منصة الاختبارات{% endblock %}</title>
 
   <!-- Cairo -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,496 +13,200 @@
 
   <style>
     :root{
-      --ff:"Cairo",system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;
-
-      --fs: 13.5px;
-      --fs-sm: 12.5px;
-      --fs-lg: 16px;
-      --fs-h2: 18px;
-
-      --bg1:#f6fbff;
-      --bg2:#f7fff9;
-
-      --txt:#0b2b22;
-      --mut:#6b7f8a;
-      --ink:#0f172a;
-
-      --line:#e7eef6;
+      --ff:"Cairo",system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+      --bg:#f7f9fc;
       --card:#ffffff;
-
-      --brand:#0ea5a4;
-      --brand2:#10b981;
-      --warn:#f59e0b;
-      --danger:#ef4444;
-      --info:#3b82f6;
-
-      --r:18px;
-      --shadow:0 14px 40px rgba(2,44,34,.09);
-      --shadow2:0 8px 20px rgba(2,44,34,.07);
-
-      --container: 1380px;
+      --txt:#0f172a;
+      --mut:#607185;
+      --line:#e7eef6;
+      --btn:#0b3a6a;
+      --btn2:#0f4c81;
+      --danger:#b42318;
+      --danger2:#d92d20;
+      --shadow:0 10px 28px rgba(15,23,42,.08);
     }
-
     *{box-sizing:border-box}
     html,body{height:100%}
-
-    /* ✅ منع أي تمدد أفقي (حتى لو عنصر داخلي كان طويل) */
-    html, body{ overflow-x:hidden; }
-    body{ max-width:100vw; }
-
     body{
       margin:0;
       font-family:var(--ff);
-      font-size:var(--fs);
+      background:var(--bg);
       color:var(--txt);
-      background:
-        radial-gradient(900px 420px at 10% 5%, rgba(14,165,164,.10), transparent 60%),
-        radial-gradient(900px 420px at 90% 10%, rgba(16,185,129,.10), transparent 60%),
-        linear-gradient(180deg,var(--bg1),var(--bg2));
     }
 
-    a{color:inherit}
+    .page{min-height:100%;display:flex;flex-direction:column}
 
-    /* ✅ حاوية مرنة */
-    .wrap{
-      max-width:var(--container);
-      margin:0 auto;
-      padding:18px 16px 40px;
-      width:100%;
-    }
-
-    .frame{
-      background:rgba(255,255,255,.72);
-      border:1px solid rgba(231,238,246,.95);
-      border-radius:24px;
-      box-shadow:var(--shadow);
-      padding:16px;
-
-      /* ✅ يمنع أي عنصر داخلي يسبب تمدد */
-      max-width:100%;
-      overflow:hidden;
-    }
-
-    /* ===========================
-       Topbar
-    ============================ */
     .topbar{
-      position:sticky; top:0; z-index:50;
+      background:rgba(255,255,255,.9);
+      border-bottom:1px solid var(--line);
       backdrop-filter: blur(10px);
-      background: rgba(255,255,255,.78);
-      border-bottom:1px solid rgba(231,238,246,.95);
     }
-    .topbar-inner{
-      max-width:var(--container);
+    .topbar .inner{
+      max-width:1180px;
       margin:0 auto;
-      padding:10px 16px;
+      padding:12px 14px;
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:10px;
+      gap:12px;
+      flex-wrap:wrap;
     }
 
     .brand{
-      display:flex;align-items:center;gap:10px;
-      font-weight:900;
-      min-width:0;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:240px;
     }
     .logo{
-      width:36px;height:36px;border-radius:14px;
-      background: linear-gradient(135deg,var(--brand),var(--brand2));
-      box-shadow: 0 10px 22px rgba(14,165,164,.18);
-      flex:0 0 auto;
+      width:38px;height:38px;border-radius:12px;
+      background:linear-gradient(135deg,#0b3a6a,#11a3c7);
+      box-shadow:0 10px 22px rgba(17,163,199,.22);
+      display:flex;align-items:center;justify-content:center;
+      color:#fff;font-weight:900;letter-spacing:.5px;user-select:none;
     }
-    .brand small{
-      display:block;
-      font-weight:700;
-      color:var(--mut);
-      margin-top:2px;
-      font-size:var(--fs-sm);
-    }
+    .brand-txt{display:flex;flex-direction:column;line-height:1.2}
+    .brand-txt b{font-size:13px;font-weight:900;letter-spacing:.2px}
+    .brand-txt span{font-size:11px;color:var(--mut);margin-top:2px}
 
-    .nav{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-      align-items:center;
-      min-width:0;
-    }
-
-    h2{font-size:var(--fs-h2); margin:0;}
-    .mut{color:var(--mut); font-size:var(--fs-sm);}
-
-    /* ===========================
-       UI Basics
-    ============================ */
-    .card{
-      background:var(--card);
-      border:1px solid rgba(231,238,246,.95);
-      border-radius:var(--r);
-      box-shadow:var(--shadow2);
-      padding:16px;
-      max-width:100%;
-      overflow:hidden;
-    }
-    .row{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      flex-wrap:wrap;
-    }
+    .nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 
     .btn{
-      display:inline-flex;align-items:center;justify-content:center;gap:8px;
-      padding:10px 13px;
-      border-radius:16px;
-      border:1px solid rgba(15,23,42,.08);
-      background: linear-gradient(135deg, rgba(14,165,164,.95), rgba(16,185,129,.95));
-      color:#fff;
-      font-weight:800;
-      font-size:var(--fs-sm);
-      cursor:pointer;
-      transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
-      box-shadow:0 10px 20px rgba(16,185,129,.16);
-      text-decoration:none;
-      user-select:none;
-      white-space:nowrap;
-    }
-    .btn:hover{filter:brightness(.985); transform: translateY(-1px); box-shadow:0 14px 26px rgba(16,185,129,.18);}
-    .btn:active{transform: translateY(0);}
-    .btn:focus{outline:none; box-shadow:0 0 0 4px rgba(14,165,164,.16), 0 14px 26px rgba(16,185,129,.18);}
-
-    .btn.secondary{
-      background:#fff;
-      color:var(--ink);
-      box-shadow:none;
-      border:1px solid rgba(231,238,246,.95);
-    }
-    .btn.secondary:hover{background:rgba(14,165,164,.04);}
-    .btn.danger{
-      background:linear-gradient(135deg,#ef4444,#f97316);
-      border-color: rgba(239,68,68,.20);
-    }
-    .btn.small{
-      padding:7px 10px;
-      border-radius:14px;
-      font-size:12px;
-      font-weight:900;
-    }
-
-    input, select, textarea{
       font-family:var(--ff);
-      font-size:var(--fs-sm);
-      width:100%;
-      padding:11px 12px;
-      border-radius:16px;
       border:1px solid var(--line);
-      outline:none;
       background:#fff;
-      transition: box-shadow .12s ease, border-color .12s ease;
-      max-width:100%;
-    }
-    input:focus, select:focus, textarea:focus{
-      border-color: rgba(14,165,164,.55);
-      box-shadow:0 0 0 4px rgba(14,165,164,.12);
-    }
-
-    /* ===========================
-       Tables (افتراضي آمن)
-    ============================ */
-    table{width:100%; border-collapse:collapse; font-size:var(--fs-sm);}
-    th,td{padding:9px; border-bottom:1px solid var(--line); text-align:right; vertical-align:middle;}
-    thead th{font-size:12.2px}
-    tbody tr:hover{background:rgba(14,165,164,.04)}
-
-    /* ✅ لفّ الجداول الكبيرة فقط */
-    .table-wrap{width:100%; overflow-x:auto; max-width:100%;}
-    .table-wrap table{min-width: 980px;}
-
-    .pill{
-      display:inline-block;
-      padding:4px 10px;
-      border-radius:999px;
-      font-size:11.5px;
-      font-weight:900;
-      white-space:nowrap;
-    }
-    .pill.ok{background:rgba(16,185,129,.12); color:#065f46;}
-    .pill.warn{background:rgba(245,158,11,.14); color:#92400e;}
-    .pill.bad{background:rgba(239,68,68,.12); color:#991b1b;}
-
-    /* ===========================
-       Toast
-    ============================ */
-    .toast-wrap{
-      position:fixed;left:16px;bottom:16px;z-index:999;
-      display:flex;flex-direction:column;gap:10px;
-      pointer-events:none;
-    }
-    .toast{
-      min-width:240px;max-width:360px;
-      background:#0f172a;color:#fff;
-      border-radius:16px;
-      padding:11px 13px;
-      box-shadow:0 18px 50px rgba(2,6,23,.25);
-      border:1px solid rgba(255,255,255,.10);
-      font-size:12.5px;
-      line-height:1.8;
-      transition: opacity .25s ease, transform .25s ease;
-      pointer-events:auto;
-    }
-    .toast.success{background:linear-gradient(135deg,#0ea5a4,#10b981)}
-    .toast.error{background:linear-gradient(135deg,#ef4444,#f97316)}
-    .toast.warning{background:linear-gradient(135deg,#f59e0b,#f97316)}
-    .toast.info{background:linear-gradient(135deg,#3b82f6,#06b6d4)}
-
-    /* ===========================
-       Confirm Modal
-    ============================ */
-    .m-backdrop{
-      position:fixed; inset:0;
-      background: rgba(2,6,23,.45);
-      display:none;
+      color:var(--txt);
+      padding:8px 12px;
+      border-radius:12px;
+      font-size:12px;
+      font-weight:800;
+      cursor:pointer;
+      text-decoration:none;
+      display:inline-flex;
       align-items:center;
-      justify-content:center;
-      padding:18px;
-      z-index:2000;
+      gap:8px;
+      transition:.15s ease;
+      box-shadow:0 1px 0 rgba(15,23,42,.03);
     }
-    .m-backdrop.show{display:flex;}
-    .m-card{
-      width: min(560px, 100%);
-      border-radius:24px;
-      background:
-        radial-gradient(820px 240px at 20% 0%, rgba(16,185,129,.12), transparent 60%),
-        radial-gradient(820px 240px at 80% 0%, rgba(14,165,164,.10), transparent 60%),
-        rgba(255,255,255,.90);
-      border:1px solid rgba(231,238,246,.95);
-      box-shadow: 0 28px 80px rgba(2,44,34,.22);
-      backdrop-filter: blur(10px);
-      transform: translateY(6px) scale(.985);
-      opacity:0;
-      transition: transform .14s ease, opacity .14s ease;
-      overflow:hidden;
+    .btn:hover{transform:translateY(-1px); box-shadow:0 10px 20px rgba(15,23,42,.06)}
+    .btn-primary{
+      background:linear-gradient(135deg,var(--btn),var(--btn2));
+      border-color:transparent;
+      color:#fff;
     }
-    .m-backdrop.show .m-card{transform: translateY(0) scale(1); opacity:1;}
-    .m-head{
-      padding:14px 16px;
-      display:flex;align-items:center;justify-content:space-between;gap:10px;
-      border-bottom:1px solid rgba(231,238,246,.95);
-      background: rgba(255,255,255,.55);
-    }
-    .m-title{display:flex;align-items:center;gap:10px;font-weight:900;color:var(--ink);}
-    .m-ico{
-      width:38px;height:38px;border-radius:14px;
-      display:flex;align-items:center;justify-content:center;
-      background: rgba(14,165,164,.10);
-      border:1px solid rgba(14,165,164,.18);
-      color:#065f46;font-weight:900;font-size:16px;
-    }
-    .m-ico.danger{background: rgba(239,68,68,.10);border-color: rgba(239,68,68,.20);color:#991b1b;}
-    .m-close{
-      width:38px;height:38px;border-radius:14px;
-      border:1px solid rgba(231,238,246,.95);
-      background:#fff;cursor:pointer;font-weight:900;color:var(--mut);
-    }
-    .m-body{padding:16px;}
-    .m-msg{color:var(--txt);line-height:1.9;font-size:13px;font-weight:900;}
-    .m-sub{margin-top:10px;color:var(--mut);font-size:12.2px;line-height:1.8;font-weight:800;}
-    .m-actions{
-      padding:14px 16px;
-      display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;
-      border-top:1px solid rgba(231,238,246,.95);
-      background: rgba(255,255,255,.55);
-    }
-    .btn.light{background:#fff;color:var(--ink);border:1px solid rgba(231,238,246,.95);box-shadow:none;}
-    .btn.light:hover{background:rgba(14,165,164,.04);}
-
-    @media (max-width: 640px){
-      .wrap{padding:12px 12px 26px;}
-      .frame{padding:12px;border-radius:20px;}
-      .topbar-inner{padding:10px 12px; flex-wrap:wrap; gap:8px;}
-      .nav{width:100%; justify-content:flex-start;}
-      .brand small{display:none;}
+    .btn-danger{
+      background:linear-gradient(135deg,var(--danger),var(--danger2));
+      border-color:transparent;
+      color:#fff;
     }
 
-    {% block base_css_extra %}{% endblock %}
+    .container{
+      max-width:1180px;
+      margin:0 auto;
+      padding:14px;
+      width:100%;
+      flex:1;
+    }
+
+    .msgs{max-width:1180px;margin:0 auto;padding:0 14px 8px}
+    .msg{
+      background:#fff;border:1px solid var(--line);
+      border-radius:14px;padding:10px 12px;margin-top:8px;
+      box-shadow:0 8px 18px rgba(15,23,42,.05);
+      font-size:12px;line-height:1.7;
+    }
+    .msg.success{border-color:rgba(34,197,94,.35)}
+    .msg.error{border-color:rgba(217,45,32,.35)}
+    .msg.warning{border-color:rgba(245,158,11,.35)}
+    .msg.info{border-color:rgba(59,130,246,.35)}
+
+    .footer{border-top:1px solid var(--line);background:#fff}
+    .footer .inner{
+      max-width:1180px;margin:0 auto;padding:10px 14px;
+      display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
+      color:var(--mut);font-size:11px;
+    }
+
+    /* ✅ تنظيف: اجعل أزرار الفورم لا تغير المسافات */
+    .nav form{margin:0;display:inline}
+    .nav form button{appearance:none}
   </style>
 
-  {% block extra_head %}{% endblock %}
+  <style id="page-extra-css">
+    {% block base_css_extra %}{% endblock %}
+  </style>
 </head>
 
 <body>
+  <div class="page">
 
-  <div class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <div class="logo"></div>
-        <div>
-          نظام الاختبار الإلكتروني
-          <small>إدارة الاختبارات للموظفين</small>
+    <header class="topbar">
+      <div class="inner">
+        <div class="brand">
+          <div class="logo">✓</div>
+          <div class="brand-txt">
+            <b>منصة الاختبارات</b>
+            <span>نظام موحّد لإدارة تنفيذ الاختبارات</span>
+          </div>
         </div>
-      </div>
 
-      <div class="nav">
-        {% with n=request.resolver_match.url_name %}
-          {% if request.user.is_staff and n and n|slice:":6" == "staff_" %}
-            <a class="btn secondary" href="{% url 'quiz:staff_manage' %}">لوحة الإدارة</a>
+        <nav class="nav">
+          <a class="btn" href="{% url 'quiz:home' %}">الرئيسية</a>
+
+          {# ✅ إعادة ضبط: للستاف دائمًا، وللمرشح فقط قبل بدء الاختبار (قبل confirm) #}
+          {% if request.user.is_authenticated and request.user.is_staff %}
+            <form method="post" action="{% url 'quiz:reset_session' %}">
+              {% csrf_token %}
+              <button class="btn" type="submit">إعادة ضبط</button>
+            </form>
+          {% elif request.session.participant_id and not request.session.attempt_id %}
+            <form method="post" action="{% url 'quiz:reset_session' %}">
+              {% csrf_token %}
+              <button class="btn" type="submit">إعادة ضبط</button>
+            </form>
           {% endif %}
-        {% endwith %}
 
-        {% if request.user.is_authenticated and request.user.is_staff %}
-          <!-- ✅ الأفضل: خروج الموظف POST -->
-          <form method="post" action="{% url 'quiz:staff_logout' %}" style="display:inline;">
-            {% csrf_token %}
-            <button class="btn secondary small" type="submit">خروج الموظف</button>
-          </form>
+          {% if request.user.is_authenticated and request.user.is_staff %}
+            <a class="btn" href="{% url 'quiz:staff_manage' %}">لوحة الإدارة</a>
 
-          {# لو تبغاه كرابط GET فقط، احذف الفورم واستخدم هذا:
-          <a class="btn secondary small" href="{% url 'quiz:staff_logout' %}">خروج الموظف</a>
-          #}
-        {% endif %}
+            {# ✅ خروج الإدارة: POST فقط لتجنب 405 #}
+            <form method="post" action="{% url 'quiz:staff_logout' %}">
+              {% csrf_token %}
+              <button class="btn btn-danger" type="submit">خروج الإدارة</button>
+            </form>
+
+          {% elif request.session.participant_id %}
+            <form method="post" action="{% url 'quiz:logout' %}">
+              {% csrf_token %}
+              <button class="btn btn-danger" type="submit">خروج</button>
+            </form>
+          {% endif %}
+        </nav>
       </div>
-    </div>
-  </div>
+    </header>
 
-  <div class="wrap">
-    {% block frame_open %}<div class="frame">{% endblock %}
-      {% block content %}{% endblock %}
-    {% block frame_close %}</div>{% endblock %}
-  </div>
-
-  <!-- ✅ Toast messages -->
-  <div class="toast-wrap" id="toasts">
     {% if messages %}
-      {% for m in messages %}
-        {% if "error" in m.tags %}
-          <div class="toast error">{{ m }}</div>
-        {% elif "success" in m.tags %}
-          <div class="toast success">{{ m }}</div>
-        {% elif "warning" in m.tags %}
-          <div class="toast warning">{{ m }}</div>
-        {% elif "info" in m.tags %}
-          <div class="toast info">{{ m }}</div>
-        {% else %}
-          <div class="toast">{{ m }}</div>
-        {% endif %}
-      {% endfor %}
+      <div class="msgs">
+        {% for m in messages %}
+          <div class="msg {% if m.tags %}{{ m.tags }}{% endif %}">{{ m }}</div>
+        {% endfor %}
+      </div>
     {% endif %}
+
+    <main class="container">
+      {% block frame_open %}{% endblock %}
+      {% block content %}{% endblock %}
+      {% block frame_close %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+      <div class="inner">
+        <div>© منصة الاختبارات</div>
+      </div>
+    </footer>
+
   </div>
 
-  <!-- ✅ Confirm Modal -->
-  <div class="m-backdrop" id="confirmBackdrop" aria-hidden="true">
-    <div class="m-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
-      <div class="m-head">
-        <div class="m-title" id="confirmTitle">
-          <div class="m-ico" id="confirmIcon">!</div>
-          <span id="confirmTitleText">تأكيد العملية</span>
-        </div>
-        <button class="m-close" type="button" id="confirmClose" aria-label="إغلاق">✕</button>
-      </div>
-
-      <div class="m-body">
-        <div class="m-msg" id="confirmMsg">هل أنت متأكد؟</div>
-        <div class="m-sub" id="confirmSub">لن يتم تنفيذ العملية إلا بعد موافقتك.</div>
-      </div>
-
-      <div class="m-actions">
-        <button class="btn light" type="button" id="confirmCancel">إلغاء</button>
-        <button class="btn danger" type="button" id="confirmOk">موافق</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // Toast fade
-    (function(){
-      const toasts = document.querySelectorAll(".toast");
-      if (!toasts.length) return;
-      setTimeout(() => {
-        toasts.forEach(t => { t.style.opacity = "0"; t.style.transform = "translateY(4px)"; });
-        setTimeout(() => toasts.forEach(t => t.remove()), 360);
-      }, 3200);
-    })();
-
-    // Confirm Modal (forms with data-confirm="1")
-    (function(){
-      const back = document.getElementById("confirmBackdrop");
-      const btnOk = document.getElementById("confirmOk");
-      const btnCancel = document.getElementById("confirmCancel");
-      const btnClose = document.getElementById("confirmClose");
-      const titleEl = document.getElementById("confirmTitleText");
-      const msgEl = document.getElementById("confirmMsg");
-      const subEl = document.getElementById("confirmSub");
-      const iconEl = document.getElementById("confirmIcon");
-
-      if (!back || !btnOk) return;
-
-      let pendingAction = null;
-
-      function openConfirm(opts){
-        const o = opts || {};
-        titleEl.textContent = o.title || "تأكيد العملية";
-        msgEl.textContent = o.message || "هل أنت متأكد؟";
-        subEl.textContent = o.sub || "لن يتم تنفيذ العملية إلا بعد موافقتك.";
-
-        const danger = !!o.danger;
-        iconEl.classList.toggle("danger", danger);
-        iconEl.textContent = danger ? "!" : "✓";
-
-        btnOk.className = danger ? "btn danger" : "btn";
-        btnOk.textContent = o.okText || (danger ? "موافق" : "تأكيد");
-        btnCancel.textContent = o.cancelText || "إلغاء";
-
-        back.classList.add("show");
-        back.setAttribute("aria-hidden", "false");
-        setTimeout(() => btnOk.focus(), 10);
-      }
-
-      function closeConfirm(){
-        back.classList.remove("show");
-        back.setAttribute("aria-hidden", "true");
-        pendingAction = null;
-      }
-
-      btnOk.addEventListener("click", () => { if (pendingAction) pendingAction(); closeConfirm(); });
-      btnCancel.addEventListener("click", closeConfirm);
-      btnClose.addEventListener("click", closeConfirm);
-      back.addEventListener("click", (e) => { if (e.target === back) closeConfirm(); });
-      document.addEventListener("keydown", (e) => {
-        if (!back.classList.contains("show")) return;
-        if (e.key === "Escape") closeConfirm();
-      });
-
-      document.addEventListener("submit", (e) => {
-        const form = e.target;
-        if (!(form instanceof HTMLFormElement)) return;
-        if (!form.dataset.confirm) return;
-
-        if (form.dataset.confirmBypass === "1") {
-          form.dataset.confirmBypass = "0";
-          return;
-        }
-
-        e.preventDefault();
-
-        pendingAction = () => {
-          form.dataset.confirmBypass = "1";
-          form.submit();
-        };
-
-        openConfirm({
-          title: form.dataset.confirmTitle || "تأكيد العملية",
-          message: form.dataset.confirmMessage || "هل أنت متأكد؟",
-          sub: form.dataset.confirmSub || "لن يتم تنفيذ العملية إلا بعد موافقتك.",
-          okText: form.dataset.confirmOk || "موافق",
-          cancelText: form.dataset.confirmCancel || "إلغاء",
-          danger: form.dataset.confirmDanger === "1",
-        });
-      });
-    })();
-  </script>
-
-  {% block extra_js %}{% endblock %}
+  {% block base_js_extra %}{% endblock %}
 </body>
 </html>

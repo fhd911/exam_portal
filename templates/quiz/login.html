@@ -1,229 +1,303 @@
 {% extends "quiz/base.html" %}
 {% block title %}تسجيل الدخول للاختبار{% endblock %}
 
-{% block frame_open %}{% endblock %}
-{% block frame_close %}{% endblock %}
-
 {% block content %}
-<div class="auth-wrap">
-  <div class="auth-card">
-    <div class="auth-head">
-      <div class="auth-hero">
-        <div class="auth-ico">✓</div>
-        <div class="auth-hero-text">
-          <h1 class="auth-title">تسجيل الدخول للاختبار</h1>
-          <p class="auth-sub">
-            أدخل <b>السجل المدني</b> و <b>آخر 4 أرقام من الجوال</b> للتحقق.
-          </p>
-        </div>
+<div class="authx-wrap">
+  <div class="authx-card card">
 
-        {# ✅ أزرار صغيرة (بدون كلمة موظف) #}
-        <div class="auth-actions">
-          {% if request.user.is_authenticated and request.user.is_staff %}
-            <a class="btn-mini danger" href="{% url 'quiz:staff_logout' %}">خروج الإدارة</a>
-          {% endif %}
-          <a class="btn-mini ghost" href="{% url 'quiz:home' %}">الرئيسية</a>
-          {# اختياري: تفريغ جلسة المتقدم لو تبغاه #}
-          <a class="btn-mini" href="{% url 'quiz:logout' %}">إعادة ضبط</a>
+    <!-- Header داخل البطاقة (بدون أزرار) -->
+    <div class="authx-head">
+      <div class="authx-head-left">
+        <div class="authx-mark" aria-hidden="true">✓</div>
+        <div>
+          <div class="authx-title">تسجيل الدخول للاختبار</div>
+          <div class="authx-hint">تحقق من البيانات قبل الضغط على دخول</div>
         </div>
+      </div>
+
+      <div class="authx-badge">
+        <span class="authx-badge-ico" aria-hidden="true">🔒</span>
+        <span>تحقق آمن</span>
       </div>
     </div>
 
-    <div class="auth-body">
-      <form method="post" action="" class="auth-form" novalidate>
-        {% csrf_token %}
+    {% if messages %}
+      <div class="authx-msgs">
+        {% for message in messages %}
+          <div class="authx-msg {% if 'error' in message.tags %}is-err{% endif %}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
 
-        <div class="grid">
-          <div class="field">
-            <label for="national_id">السجل المدني</label>
+    <form method="post" action="{% url 'quiz:login' %}">
+      {% csrf_token %}
+
+      <div class="authx-grid">
+
+        <div class="authx-field">
+          <label class="authx-label">السجل المدني</label>
+          <div class="authx-inp">
+            <span class="authx-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4 7.5c0-1.38 1.12-2.5 2.5-2.5h11C19.88 5 21 6.12 21 7.5v9c0 1.38-1.12 2.5-2.5 2.5h-11C5.12 19 4 17.88 4 16.5v-9Z" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M8 9.5h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M8 13h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M16.5 12.2c.9 0 1.6.7 1.6 1.6s-.7 1.6-1.6 1.6-1.6-.7-1.6-1.6.7-1.6 1.6-1.6Z" stroke="currentColor" stroke-width="1.8"/>
+              </svg>
+            </span>
+
             <input
-              id="national_id"
+              class="authx-input"
               name="national_id"
+              type="text"
               inputmode="numeric"
+              pattern="[0-9]{10}"
+              maxlength="10"
               autocomplete="off"
               placeholder="مثال: 10xxxxxxxx"
-              required
-            >
+              aria-label="السجل المدني"
+            />
           </div>
+          <div class="authx-help">يجب أن يكون <b>10 أرقام</b> بدون مسافات.</div>
+        </div>
 
-          <div class="field">
-            <label for="last4">آخر 4 أرقام من الجوال</label>
+        <div class="authx-field">
+          <label class="authx-label">آخر 4 أرقام من الجوال</label>
+          <div class="authx-inp">
+            <span class="authx-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M9 3.8h6c1.1 0 2 .9 2 2V18.2c0 1.1-.9 2-2 2H9c-1.1 0-2-.9-2-2V5.8c0-1.1.9-2 2-2Z" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M10 6.7h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M12 18.2h.01" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+              </svg>
+            </span>
+
             <input
-              id="last4"
-              name="last4"
+              class="authx-input"
+              name="phone_last4"
+              type="password"
               inputmode="numeric"
+              pattern="[0-9]{4}"
               maxlength="4"
               autocomplete="off"
               placeholder="مثال: 1234"
-              required
-            >
+              aria-label="آخر 4 أرقام من الجوال"
+            />
           </div>
+          <div class="authx-help">اكتب آخر <b>4 أرقام</b> من الجوال المسجل.</div>
         </div>
 
-        <button class="btn auth-btn" type="submit">دخول</button>
+        <!-- زر دخول واضح وبنفس خط النظام -->
+        <button class="authx-btn" type="submit">دخول</button>
 
-        <div class="tip">
-          <span class="ic">ℹ️</span>
-          <span>
-            إذا ظهرت رسالة <b>يوجد اختبار جارٍ</b> فهذا يعني أن هناك جلسة أخرى مفتوحة لنفس السجل.
-            تواصل مع الإدارة لإعادة فتح المحاولة عند الحاجة.
-          </span>
+        <div class="authx-foot">
+          في حال تعذّر الدخول، تأكد من صحة البيانات ثم حاول مرة أخرى.
         </div>
-      </form>
-    </div>
+
+      </div>
+    </form>
+
   </div>
 </div>
-{% endblock %}
 
-{% block base_css_extra %}
-  .wrap{max-width:1180px;margin:0 auto;padding:18px 16px 40px;}
-  .auth-wrap{
-    min-height: calc(100vh - 64px);
+<style>
+  /* ✅ نفس خط base */
+  .authx-wrap, .authx-wrap *{ font-family: var(--ff); }
+
+  .authx-wrap{
+    min-height:calc(100vh - 180px);
     display:flex;
     align-items:center;
     justify-content:center;
-    padding: 18px 16px 40px;
+    padding:18px 14px;
   }
-  .auth-card{
-    width: min(560px, 100%);
-    border-radius: 26px;
-    border:1px solid rgba(231,238,246,.95);
-    box-shadow: 0 22px 60px rgba(2,44,34,.10);
-    background:
-      radial-gradient(900px 240px at 15% 0%, rgba(16,185,129,.14), transparent 60%),
-      radial-gradient(900px 240px at 85% 0%, rgba(14,165,164,.12), transparent 60%),
-      rgba(255,255,255,.82);
-    backdrop-filter: blur(10px);
+
+  .authx-card{
+    width:min(720px, 100%);
+    border-radius:22px;
     overflow:hidden;
+    position:relative;
   }
 
-  .auth-head{
-    padding: 16px 16px 10px;
-    border-bottom:1px solid rgba(231,238,246,.95);
-    background: rgba(255,255,255,.55);
+  .authx-card:before{
+    content:"";
+    position:absolute;
+    inset:-24px;
+    background:
+      radial-gradient(520px 240px at 18% 8%, rgba(16,185,129,.16), transparent 60%),
+      radial-gradient(520px 240px at 86% 18%, rgba(14,165,233,.14), transparent 60%),
+      radial-gradient(560px 260px at 55% 88%, rgba(168,85,247,.12), transparent 60%);
+    pointer-events:none;
+    z-index:0;
   }
 
-  .auth-hero{
+  .authx-head,
+  .authx-msgs,
+  .authx-grid{ position:relative; z-index:1; }
+
+  .authx-head{
     display:flex;
-    gap:12px;
     align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 16px 12px;
+    border-bottom:1px solid rgba(231,238,246,.95);
+    background:rgba(255,255,255,.55);
   }
 
-  .auth-hero-text{flex:1; min-width: 0;}
-
-  .auth-actions{
+  .authx-head-left{
     display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-    justify-content:flex-end;
     align-items:center;
-    margin-inline-start: auto;
+    gap:10px;
+    min-width:0;
   }
 
-  .btn-mini{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    padding:7px 10px;
-    border-radius:999px;
-    font-weight:1000;
-    font-size:12px;
-    border:1px solid rgba(231,238,246,.95);
-    background: rgba(255,255,255,.78);
-    color: #0f172a;
-    text-decoration:none;
-    box-shadow: 0 10px 20px rgba(2,44,34,.06);
-  }
-  .btn-mini:hover{transform: translateY(-1px);}
-
-  .btn-mini.ghost{
-    background: rgba(2,132,199,.06);
-    border-color: rgba(2,132,199,.14);
-  }
-  .btn-mini.danger{
-    background: rgba(239,68,68,.08);
-    border-color: rgba(239,68,68,.18);
-    color: #991b1b;
-  }
-
-  .auth-ico{
-    width:46px;height:46px;border-radius:18px;
+  .authx-mark{
+    width:44px;height:44px;border-radius:16px;
     display:flex;align-items:center;justify-content:center;
-    background: linear-gradient(135deg, rgba(14,165,164,.95), rgba(16,185,129,.95));
-    box-shadow: 0 16px 30px rgba(16,185,129,.18);
-    color:#fff;font-weight:1000;font-size:18px;
+    color:#fff;font-weight:1000;font-size:16px;
+    background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));
+    box-shadow:0 16px 34px rgba(16,185,129,.18);
     flex:0 0 auto;
   }
-  .auth-title{margin:0;font-size:18px;font-weight:1000;color:var(--ink)}
-  .auth-sub{margin:6px 0 0;color:var(--mut);font-weight:800;line-height:1.9;font-size:13px}
 
-  .auth-body{padding: 14px 16px 16px}
-  .auth-form{margin:0}
-  .grid{display:grid;grid-template-columns: 1fr 1fr; gap:10px}
-  @media (max-width: 640px){
-    .grid{grid-template-columns:1fr;}
-    .auth-actions{justify-content:flex-start; margin-top:10px;}
-    .auth-hero{flex-wrap:wrap;}
+  .authx-title{
+    font-size:16px;
+    font-weight:1000;
+    letter-spacing:.2px;
+    margin:0;
+  }
+  .authx-hint{
+    margin-top:4px;
+    color:var(--mut);
+    font-size:12px;
+    line-height:1.8;
   }
 
-  .field label{
+  .authx-badge{
+    display:flex;align-items:center;gap:8px;
+    padding:8px 10px;
+    border-radius:999px;
+    border:1px solid rgba(231,238,246,.95);
+    background:rgba(255,255,255,.75);
+    font-size:12px;
+    color:var(--ink);
+    white-space:nowrap;
+  }
+
+  .authx-msgs{ padding:12px 16px 0; }
+  .authx-msg{
+    padding:10px 12px;
+    border-radius:16px;
+    border:1px solid rgba(231,238,246,.95);
+    background:rgba(255,255,255,.8);
+    color:var(--ink);
+    font-size:12px;
+    line-height:1.9;
+    margin-bottom:10px;
+  }
+  .authx-msg.is-err{
+    border-color: rgba(239,68,68,.25);
+    background: rgba(239,68,68,.08);
+  }
+
+  .authx-grid{
+    padding:14px 16px 16px;
+    display:grid;
+    gap:12px;
+  }
+
+  .authx-label{
     display:block;
+    font-size:12px;
     font-weight:1000;
-    font-size:12.8px;
     margin-bottom:6px;
     color:var(--ink);
   }
 
-  .auth-btn{
-    width:100%;
-    margin-top:12px;
-    padding:12px 14px;
+  .authx-inp{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:0 12px;
+    height:46px;
     border-radius:18px;
-    font-size:14px;
-    font-weight:1000;
+    border:1px solid var(--line);
+    background:#fff;
+    box-shadow:0 10px 24px rgba(2,44,34,.06);
+    transition:.15s ease;
   }
 
-  .tip{
-    margin-top:12px;
-    display:flex;
-    gap:10px;
-    align-items:flex-start;
-    padding:10px 12px;
-    border-radius:18px;
-    background: rgba(2,132,199,.06);
-    border:1px solid rgba(2,132,199,.14);
-    color: #0f172a;
-    font-weight:850;
-    line-height:1.9;
-    font-size:12.6px;
-  }
-  .tip .ic{
-    width:28px;height:28px;border-radius:12px;
+  .authx-ico{
+    width:34px;height:34px;border-radius:14px;
     display:flex;align-items:center;justify-content:center;
-    background:#fff;border:1px solid rgba(2,132,199,.18);
+    background: rgba(16,185,129,.08);
+    color: rgba(16,185,129,.98);
     flex:0 0 auto;
   }
-{% endblock %}
+  .authx-ico svg{ width:18px; height:18px; }
 
-{% block extra_js %}
-<script>
-(function(){
-  const nat = document.getElementById("national_id");
-  const last4 = document.getElementById("last4");
-  if (!nat || !last4) return;
+  .authx-input{
+    width:100%;
+    border:0;
+    outline:0;
+    background:transparent;
+    font-size:12px;
+    padding:0;
+  }
+  .authx-input::placeholder{ color:#93a4b8; }
 
-  function digitsOnly(el, maxLen){
-    el.addEventListener("input", () => {
-      let v = (el.value || "").replace(/\D+/g, "");
-      if (maxLen) v = v.slice(0, maxLen);
-      el.value = v;
-    });
+  .authx-inp:focus-within{
+    border-color: rgba(16,185,129,.38);
+    box-shadow:
+      0 0 0 4px rgba(16,185,129,.12),
+      0 12px 28px rgba(2,44,34,.08);
   }
 
-  digitsOnly(nat, 0);
-  digitsOnly(last4, 4);
+  .authx-help{
+    margin-top:6px;
+    font-size:11.5px;
+    color:var(--mut);
+    line-height:1.8;
+  }
 
-  setTimeout(() => nat.focus(), 80);
-})();
-</script>
+  /* ✅ زر دخول أوضح وبنفس الخط */
+  .authx-btn{
+    width:100%;
+    border:0;
+    height:48px;
+    border-radius:18px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    background: linear-gradient(135deg, #047857, #059669, #22c55e);
+    box-shadow: 0 18px 36px rgba(5,150,105,.28);
+
+    color:#fff;
+    font-size:14px;
+    font-weight:1000;
+    letter-spacing:.3px;
+    text-shadow: 0 1px 0 rgba(0,0,0,.18);
+
+    cursor:pointer;
+    transition:.16s ease;
+  }
+  .authx-btn:hover{
+    transform: translateY(-1px);
+    filter: brightness(1.02);
+  }
+  .authx-btn:active{
+    transform: translateY(0px);
+    filter: brightness(.98);
+  }
+
+  .authx-foot{
+    text-align:center;
+    font-size:11.5px;
+    color:var(--mut);
+    line-height:1.9;
+    margin-top:2px;
+  }
+</style>
 {% endblock %}

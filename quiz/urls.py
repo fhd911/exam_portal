@@ -1,5 +1,5 @@
 # ============================
-# quiz/urls.py  (استبدله بالكامل)
+# quiz/urls.py  (استبدله بالكامل) ✅ متوافق + نظيف
 # ============================
 from __future__ import annotations
 
@@ -15,6 +15,9 @@ urlpatterns = [
     path("", views.home, name="home"),
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
+
+    # ✅ إصلاح/تهيئة الجلسة (زر إعادة ضبط في base.html)
+    path("reset/", views.reset_session_view, name="reset_session"),
 
     # ✅ صفحة الإقرار قبل الاختبار
     path("confirm/", views.confirm_view, name="confirm"),
@@ -33,14 +36,21 @@ urlpatterns = [
     path("staff/import/questions/", views.staff_import_questions_view, name="staff_import_questions"),
     path("staff/import/participants/", views.staff_import_participants_view, name="staff_import_participants"),
 
-    # Exports
+    # Exports (Attempts)
     path("staff/export/csv/", views.staff_export_csv_view, name="staff_export_csv"),
     path("staff/export/xlsx/", views.staff_export_xlsx_view, name="staff_export_xlsx"),
+
+    # ✅ Export (Not Tested)
+    path(
+        "staff/export/not-tested/xlsx/",
+        views.staff_export_not_tested_xlsx_view,
+        name="staff_export_not_tested_xlsx",
+    ),
 
     # Attempt detail
     path("staff/attempt/<int:attempt_id>/", views.staff_attempt_detail_view, name="staff_attempt_detail"),
 
-    # ✅ Confirmation pages (GET) — تعرض نموذج POST مع CSRF
+    # ✅ Confirmation pages (GET)
     path(
         "staff/attempt/<int:attempt_id>/force-finish/confirm/",
         views.staff_attempt_finish_confirm_view,

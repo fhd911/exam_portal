@@ -1,124 +1,128 @@
+{# quiz/templates/quiz/staff_import_questions.html #}
 {% extends "quiz/base.html" %}
+{% load static %}
+
 {% block title %}استيراد الأسئلة{% endblock %}
 
 {% block content %}
-<div class="wrap">
-  <div class="box">
-    <div class="head">
-      <div>
-        <h2>استيراد الأسئلة</h2>
-        <p>ملف واحد يحتوي 3 شيت: deputy / counselor / activity — كل شيت 50 سؤال</p>
+<div class="wrap" style="max-width:980px;margin:0 auto;">
+
+  <!-- رأس الصفحة -->
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+    <div>
+      <h1 style="margin:0;font-size:16px;font-weight:1000;letter-spacing:.2px;color:#0f172a;">
+        استيراد الأسئلة
+      </h1>
+      <div style="margin-top:6px;color:#607185;line-height:1.8;font-size:12px;">
+        ملف واحد (.xlsx) — يحتوي أسئلة الاختبار.  
+        الأعمدة المطلوبة: <b>text</b>, <b>a</b>, <b>b</b>, <b>correct</b> (والبقية اختيارية).
       </div>
-      <a class="btn soft" href="{% url 'quiz:staff_manage' %}">رجوع</a>
     </div>
 
-    {% if messages %}
-      <div class="msgs">
-        {% for m in messages %}
-          <div class="msg {{ m.tags|default:"info" }}">{{ m }}</div>
-        {% endfor %}
-      </div>
-    {% endif %}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <a class="btn"
+         href="{% url 'quiz:staff_manage' %}"
+         style="text-decoration:none;white-space:nowrap;background:rgba(245,246,255,.9);border:1px solid rgba(99,102,241,.25);color:#0f172a;font-weight:1000;">
+        رجوع
+      </a>
+    </div>
+  </div>
 
-    <form method="post" enctype="multipart/form-data" class="form">
+  <!-- Card -->
+  <div class="glass" style="
+    background:rgba(255,255,255,.86);
+    border:1px solid rgba(231,238,246,.95);
+    border-radius:18px;
+    padding:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.06);
+  ">
+
+    <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
 
-      <div class="grid">
-        <div class="f">
-          <label>ملف Excel</label>
-          <input type="file" name="file" accept=".xlsx" required>
-        </div>
-
-        <div class="f">
-          <label class="chk">
-            <input type="checkbox" name="dry_run" value="1">
-            <span>Preview فقط (بدون حفظ)</span>
+      <!-- اختيار الملف -->
+      <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:10px;align-items:end;">
+        <div>
+          <label style="display:block;font-size:11px;color:#607185;margin-bottom:6px;">
+            اسم الاختبار داخل الملف (اختياري)
           </label>
-        </div>
-      </div>
-
-      <div class="foot">
-        <button class="btn" type="submit">تنفيذ</button>
-      </div>
-    </form>
-
-    <div class="note">
-      <div class="t">الأعمدة المطلوبة داخل كل شيت</div>
-      <div class="code">order, text, a, b, c, d, correct</div>
-      <div class="s">correct يجب أن يكون A/B/C/D</div>
-    </div>
-
-    {% if counts %}
-      <div class="preview">
-        <h3>نتيجة القراءة</h3>
-        <div class="chips">
-          {% for k,v in counts.items %}
-            <span class="chip">{{ k }}: {{ v }}</span>
-          {% endfor %}
-        </div>
-
-        {% if preview %}
-          <div class="pvGrid">
-            {% for sh,items in preview.items %}
-              <div class="pvCard">
-                <div class="pvT">{{ sh }}</div>
-                <table class="tbl">
-                  <thead><tr><th>order</th><th>text</th><th>correct</th></tr></thead>
-                  <tbody>
-                    {% for x in items %}
-                      <tr>
-                        <td>{{ x.order }}</td>
-                        <td class="tx">{{ x.text|truncatechars:70 }}</td>
-                        <td>{{ x.correct }}</td>
-                      </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-            {% endfor %}
+          <input name="quiz_title"
+                 placeholder="إذا يوجد عمود quiz_title سيُستخدم تلقائيًا"
+                 style="width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(148,163,184,.35);font-size:12px;outline:none;">
+          <div style="margin-top:6px;color:#6b7a89;font-size:11px;line-height:1.7;">
+            إذا لم يوجد عمود <b>quiz_title</b> في الملف، سيتم استخدام “الاختبار” تلقائيًا (حسب كود الـ views).
           </div>
-        {% endif %}
-      </div>
-    {% endif %}
+        </div>
 
+        <div>
+          <label style="display:block;font-size:11px;color:#607185;margin-bottom:6px;">
+            ملف Excel (.xlsx)
+          </label>
+          <input type="file"
+                 name="file"
+                 accept=".xlsx"
+                 required
+                 style="width:100%;padding:8px 10px;border-radius:12px;border:1px solid rgba(148,163,184,.35);font-size:12px;outline:none;background:#fff;">
+          <div style="margin-top:6px;color:#6b7a89;font-size:11px;line-height:1.7;">
+            يجب أن يحتوي الصف الأول على أسماء الأعمدة.
+          </div>
+        </div>
+      </div>
+
+      <!-- خيارات (اختياري) -->
+      <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <label style="
+          display:flex;gap:8px;align-items:flex-start;
+          padding:10px 12px;border-radius:14px;
+          border:1px solid rgba(148,163,184,.28);
+          background:rgba(250,251,255,.75);
+          font-size:12px;color:#0f172a;line-height:1.8;
+          opacity:.6;
+        " title="غير مفعّل حالياً في الكود (جاهز للمستقبل)">
+          <input type="checkbox" disabled style="margin-top:3px;">
+          <span>
+            معاينة فقط (بدون حفظ)
+            <div style="color:#6b7a89;font-size:11px;">(غير مفعّل حالياً)</div>
+          </span>
+        </label>
+
+        <button class="btn" type="submit"
+                style="white-space:nowrap;background:rgba(240,255,247,.9);border:1px solid rgba(16,185,129,.25);color:#0f172a;font-weight:1000;">
+          تنفيذ الاستيراد
+        </button>
+      </div>
+
+      <!-- تنسيق الأعمدة -->
+      <div style="margin-top:14px;border-top:1px solid rgba(180,190,205,.25);padding-top:12px;">
+        <div style="font-weight:1000;font-size:13px;color:#0f172a;margin-bottom:8px;">
+          الأعمدة المطلوبة داخل كل شيت
+        </div>
+
+        <div style="
+          border:1px solid rgba(148,163,184,.28);
+          border-radius:16px;
+          padding:12px;
+          background:rgba(250,251,255,.85);
+        ">
+          <div style="color:#607185;font-size:12px;line-height:2;">
+            <b>order</b> (اختياري) — ترتيب السؤال  
+            <br>
+            <b>text</b> (إلزامي) — نص السؤال  
+            <br>
+            <b>a</b>, <b>b</b> (إلزامي) — خيار 1 وخيار 2  
+            <br>
+            <b>c</b>, <b>d</b> (اختياري) — خيار 3 وخيار 4  
+            <br>
+            <b>correct</b> (إلزامي) — الصحيح: <b>A</b>/<b>B</b>/<b>C</b>/<b>D</b> أو رقم <b>1-4</b>
+          </div>
+
+          <div style="margin-top:10px;color:#6b7a89;font-size:11px;line-height:1.8;">
+            ملاحظة: الكود الحالي يقوم بحذف خيارات السؤال وإعادة إنشائها عند الاستيراد لتوحيد البيانات.
+          </div>
+        </div>
+      </div>
+
+    </form>
   </div>
 </div>
-
-<style>
-  .wrap{max-width:1100px;margin:0 auto;padding:12px 10px 44px}
-  .box{background:#fff;border:1px solid rgba(231,238,246,.95);border-radius:22px;padding:14px;box-shadow:0 16px 34px rgba(2,44,34,.06)}
-  .head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
-  h2{margin:0;font-size:18px;font-weight:1200}
-  p{margin:6px 0 0;color:var(--mut);font-weight:1000;line-height:1.9}
-  .btn{border:0;border-radius:999px;padding:9px 12px;font-weight:1200;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:#0ea5e9;color:#fff}
-  .btn.soft{background:#eef6ff;color:#0b4c7a;border:1px solid rgba(15,23,42,.08)}
-
-  .msgs{display:grid;gap:8px;margin:12px 0}
-  .msg{padding:10px 12px;border-radius:16px;border:1px solid rgba(231,238,246,.95);background:#fafcff;font-weight:1100}
-
-  .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:10px;margin-top:12px;align-items:end}
-  @media (max-width:900px){.grid{grid-template-columns:1fr}}
-  .f label{display:block;font-size:12px;color:var(--mut);font-weight:1100;margin:0 2px 6px}
-  .f input[type="file"]{width:100%;border-radius:14px;border:1px solid rgba(15,23,42,.10);padding:10px;font-weight:1000}
-  .chk{display:flex;gap:10px;align-items:flex-start;margin-top:6px;font-weight:1100;line-height:1.9;color:#0f172a}
-  .foot{display:flex;justify-content:flex-end;margin-top:12px}
-
-  .note{margin-top:14px;border-radius:18px;border:1px solid rgba(231,238,246,.95);background:#fafcff;padding:12px}
-  .note .t{font-weight:1200}
-  .note .code{margin-top:8px;font-family:ui-monospace,Consolas,monospace;background:#fff;border:1px solid rgba(231,238,246,.95);padding:10px;border-radius:14px}
-  .note .s{margin-top:6px;color:var(--mut);font-weight:1000}
-
-  .preview{margin-top:14px;border-top:1px dashed rgba(15,23,42,.12);padding-top:12px}
-  .preview h3{margin:0;font-size:16px;font-weight:1200}
-  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-  .chip{padding:7px 10px;border-radius:999px;border:1px solid rgba(15,23,42,.10);background:#fff;font-weight:1200;font-size:12px}
-  .pvGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
-  @media (max-width:1000px){.pvGrid{grid-template-columns:1fr}}
-  .pvCard{border-radius:18px;border:1px solid rgba(231,238,246,.95);background:#fff;padding:10px}
-  .pvT{font-weight:1200;margin-bottom:8px}
-  .tbl{width:100%;border-collapse:separate;border-spacing:0}
-  .tbl thead th{background:#f8fafc;border-bottom:1px solid rgba(15,23,42,.08);padding:8px;font-size:12px;font-weight:1200}
-  .tbl tbody td{border-bottom:1px solid rgba(15,23,42,.06);padding:8px;font-weight:1000;font-size:12.5px;vertical-align:top}
-  .tx{line-height:1.8}
-</style>
 {% endblock %}

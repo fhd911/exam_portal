@@ -1,90 +1,141 @@
+{# quiz/templates/quiz/staff_import_participants.html #}
 {% extends "quiz/base.html" %}
+{% load static %}
+
 {% block title %}استيراد المرشحين{% endblock %}
 
 {% block content %}
-<div class="wrap">
-  <div class="box">
-    <div class="head">
-      <div>
-        <h2>استيراد المرشحين</h2>
-        <p>Excel (.xlsx) — الأعمدة المطلوبة: national_id, full_name, phone_last4, domain</p>
+<div class="wrap" style="max-width:980px;margin:0 auto;">
+
+  <!-- رأس -->
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+    <div>
+      <h1 style="margin:0;font-size:16px;font-weight:1000;letter-spacing:.2px;color:#0f172a;">
+        استيراد المرشحين
+      </h1>
+      <div style="margin-top:6px;color:#607185;line-height:1.8;font-size:12px;">
+        الأمدة المطلوبة — Excel (.xlsx): <b>national_id</b>, <b>full_name</b>, <b>phone_last4</b>, <b>domain</b>
       </div>
-      <a class="btn soft" href="{% url 'quiz:staff_manage' %}">رجوع</a>
     </div>
 
-    {% if messages %}
-      <div class="msgs">
-        {% for m in messages %}
-          <div class="msg {{ m.tags|default:"info" }}">{{ m }}</div>
-        {% endfor %}
-      </div>
-    {% endif %}
-
-    <form method="post" enctype="multipart/form-data" class="form">
-      {% csrf_token %}
-
-      <div class="grid">
-        <div class="f">
-          <label>ملف Excel</label>
-          <input type="file" name="file" accept=".xlsx" required>
-        </div>
-
-        <div class="f">
-          <label>اسم الشيت</label>
-          <input name="sheet_name" value="participants" placeholder="participants">
-        </div>
-
-        <div class="f">
-          <label class="chk">
-            <input type="checkbox" name="replace" value="1">
-            <span>استبدال التسجيلات (يوقف الكل ثم يفعّل الموجود)</span>
-          </label>
-        </div>
-
-        <div class="f">
-          <label class="chk">
-            <input type="checkbox" name="reset_taken" value="1">
-            <span>إعادة تعيين القفل (للمرشحين المستوردين فقط)</span>
-          </label>
-        </div>
-      </div>
-
-      <div class="foot">
-        <button class="btn" type="submit">استيراد</button>
-      </div>
-    </form>
-
-    <div class="note">
-      <div class="t">تنسيق الأعمدة</div>
-      <ul>
-        <li><b>domain</b>: deputy / counselor / activity أو عربي (وكيل/موجه/نشاط)</li>
-        <li><b>phone_last4</b>: آخر 4 أرقام فقط</li>
-        <li>اختياري: <b>person_allowed</b> و <b>is_allowed</b></li>
-      </ul>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <a class="btn"
+         href="{% url 'quiz:staff_manage' %}"
+         style="text-decoration:none;white-space:nowrap;background:rgba(245,246,255,.9);border:1px solid rgba(99,102,241,.25);color:#0f172a;font-weight:1000;">
+        رجوع
+      </a>
     </div>
   </div>
+
+  <!-- Card -->
+  <div class="glass" style="
+    background:rgba(255,255,255,.86);
+    border:1px solid rgba(231,238,246,.95);
+    border-radius:18px;
+    padding:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.06);
+  ">
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <!-- Grid -->
+      <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:10px;align-items:end;">
+
+        <!-- اسم الشيت -->
+        <div>
+          <label style="display:block;font-size:11px;color:#607185;margin-bottom:6px;">
+            اسم الشيت (اختياري)
+          </label>
+
+          <input name="sheet"
+                 value="participants"
+                 placeholder="مثال: participants"
+                 style="width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(148,163,184,.35);font-size:12px;outline:none;">
+          <div style="margin-top:6px;color:#6b7a89;font-size:11px;line-height:1.7;">
+            إذا تركته فارغًا سيتم استخدام أول ورقة في الملف تلقائيًا.
+          </div>
+        </div>
+
+        <!-- اختيار الملف -->
+        <div>
+          <label style="display:block;font-size:11px;color:#607185;margin-bottom:6px;">
+            ملف Excel (.xlsx)
+          </label>
+
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="file"
+                   name="file"
+                   accept=".xlsx"
+                   required
+                   style="flex:1;padding:8px 10px;border-radius:12px;border:1px solid rgba(148,163,184,.35);font-size:12px;outline:none;background:#fff;">
+          </div>
+
+          <div style="margin-top:6px;color:#6b7a89;font-size:11px;line-height:1.7;">
+            تأكد أن الصف الأول يحتوي أسماء الأعمدة.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- خيارات -->
+      <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <label style="
+          display:flex;gap:8px;align-items:flex-start;
+          padding:10px 12px;border-radius:14px;
+          border:1px solid rgba(148,163,184,.28);
+          background:rgba(250,251,255,.75);
+          font-size:12px;color:#0f172a;line-height:1.8;
+        ">
+          <input type="checkbox" name="replace_all" value="1" style="margin-top:3px;">
+          <span>
+            استبدال التسجيلات (حذف الكل ثم إدخال الجديد)
+            <div style="color:#6b7a89;font-size:11px;">(اختياري) استخدمه فقط عند الرغبة بتحديث شامل.</div>
+          </span>
+        </label>
+
+        <label style="
+          display:flex;gap:8px;align-items:flex-start;
+          padding:10px 12px;border-radius:14px;
+          border:1px solid rgba(148,163,184,.28);
+          background:rgba(250,251,255,.75);
+          font-size:12px;color:#0f172a;line-height:1.8;
+        ">
+          <input type="checkbox" name="reset_locks" value="1" style="margin-top:3px;">
+          <span>
+            إعادة تعيين القفل (للمستوردين فقط)
+            <div style="color:#6b7a89;font-size:11px;">(اختياري) يزيل locked_domain/has_taken_exam عن نفس المرشحين في الملف.</div>
+          </span>
+        </label>
+      </div>
+
+      <!-- زر الاستيراد -->
+      <div style="margin-top:14px;display:flex;justify-content:flex-start;gap:10px;flex-wrap:wrap;">
+        <button class="btn" type="submit"
+                style="white-space:nowrap;background:rgba(240,255,247,.9);border:1px solid rgba(16,185,129,.25);color:#0f172a;font-weight:1000;">
+          استيراد
+        </button>
+      </div>
+
+      <!-- تنسيق الأعمدة -->
+      <div style="margin-top:14px;border-top:1px solid rgba(180,190,205,.25);padding-top:12px;">
+        <div style="font-weight:1000;font-size:13px;color:#0f172a;margin-bottom:8px;">
+          تنسيق الأعمدة
+        </div>
+
+        <ul style="margin:0;padding-right:18px;color:#607185;font-size:12px;line-height:2;">
+          <li><b>national_id</b> : رقم الهوية</li>
+          <li><b>full_name</b> : الاسم الكامل</li>
+          <li><b>phone_last4</b> : آخر 4 أرقام من الجوال</li>
+          <li><b>domain</b> : يقبل <b>deputy / counselor / activity</b> أو عربي (وكيل/مرشد/نشاط)</li>
+          <li style="color:#6b7a89;font-size:11px;line-height:1.9;margin-top:6px;">
+            (اختياري) <b>is_allowed</b> أو <b>allowed</b> لتحديد السماح (Yes/No أو 1/0).
+          </li>
+        </ul>
+      </div>
+
+    </form>
+  </div>
+
 </div>
-
-<style>
-  .wrap{max-width:980px;margin:0 auto;padding:12px 10px 44px}
-  .box{background:#fff;border:1px solid rgba(231,238,246,.95);border-radius:22px;padding:14px;box-shadow:0 16px 34px rgba(2,44,34,.06)}
-  .head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
-  h2{margin:0;font-size:18px;font-weight:1200}
-  p{margin:6px 0 0;color:var(--mut);font-weight:1000;line-height:1.9}
-  .btn{border:0;border-radius:999px;padding:9px 12px;font-weight:1200;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;background:#0ea5e9;color:#fff}
-  .btn.soft{background:#eef6ff;color:#0b4c7a;border:1px solid rgba(15,23,42,.08)}
-
-  .msgs{display:grid;gap:8px;margin:12px 0}
-  .msg{padding:10px 12px;border-radius:16px;border:1px solid rgba(231,238,246,.95);background:#fafcff;font-weight:1100}
-
-  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
-  @media (max-width:900px){.grid{grid-template-columns:1fr}}
-  .f label{display:block;font-size:12px;color:var(--mut);font-weight:1100;margin:0 2px 6px}
-  .f input[type="file"], .f input{width:100%;border-radius:14px;border:1px solid rgba(15,23,42,.10);padding:10px;font-weight:1000}
-  .chk{display:flex;gap:10px;align-items:flex-start;margin-top:6px;font-weight:1100;line-height:1.9;color:#0f172a}
-  .foot{display:flex;justify-content:flex-end;margin-top:12px}
-  .note{margin-top:14px;border-radius:18px;border:1px solid rgba(231,238,246,.95);background:#fafcff;padding:12px}
-  .note .t{font-weight:1200}
-  .note ul{margin:8px 0 0;line-height:1.9}
-</style>
 {% endblock %}

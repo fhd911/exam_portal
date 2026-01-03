@@ -3,173 +3,219 @@
 
 {% block content %}
 <div class="q-wrap">
-  <div class="q-top">
-    <div class="q-left">
-      <h2 class="q-title">{{ attempt.quiz.title }}</h2>
+
+  <div class="q-head">
+    <div class="q-title">
+      <div class="q-quiz">{{ attempt.quiz.title }}</div>
+
       <div class="q-meta">
-        <span class="q-pill">السؤال <b>{{ index }}</b> من <b>{{ total }}</b></span>
-        <span class="q-pill q-pill2">المتبقي: <b id="tRemain">{{ remaining_seconds }}</b> ث</span>
+        <span class="chip chip-soft">
+          <span class="k">السؤال</span>
+          <span class="v">{{ index }}</span>
+          <span class="mut">من</span>
+          <span class="v">{{ total }}</span>
+        </span>
+
+        <span class="chip chip-warn" title="الوقت المتبقي">
+          <span class="k">المتبقي</span>
+          <span class="v" id="tRemain"
+                data-remain="{{ remaining_seconds }}">{{ remaining_seconds }}</span>
+          <span class="mut">ث</span>
+        </span>
       </div>
     </div>
-    <div class="q-right">
-      <a class="btn secondary" href="{% url 'quiz:logout' %}">خروج</a>
-    </div>
+
+    <form method="post" action="{% url 'quiz:logout' %}" class="q-exit">
+      {% csrf_token %}
+      <button class="btn btn-danger btn-sm" type="submit">خروج</button>
+    </form>
   </div>
 
   <div class="card q-card">
-    <div class="q-head">
-      <div class="q-no">س{{ index }}</div>
-      <div class="q-text">{{ q.text }}</div>
+    <div class="q-qtext">
+      {{ question.text }}
     </div>
 
-    <form method="post" id="qForm" class="q-form">
-      {% csrf_token %}
+    <!-- ✅ تنبيه صغير (بدل ما يكون “ملحوظة طويلة”) -->
+    <div class="q-hint">
+      <span class="hi">ℹ️</span>
+      <span class="ht">
+        مدة السؤال <b>{{ attempt.quiz.per_question_seconds|default:50 }}</b> ثانية —
+        عند انتهاء الوقت سيتم الانتقال تلقائيًا، ويُمنع الاستعانة بأي وسائل خارجية.
+      </span>
+    </div>
 
-      <div class="q-choices">
+    <form method="post" class="q-form" id="qForm" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="skip" id="skipField" value="0">
+
+      <div class="opts">
         {% for c in choices %}
-          <label class="q-ch">
-            <input type="radio" name="choice_id" value="{{ c.id }}">
-            <span class="q-dot"></span>
-            <span class="q-ch-txt">{{ c.text }}</span>
+          <label class="opt">
+            <input type="radio" name="choice" value="{{ c.id }}">
+            <span class="dot" aria-hidden="true"></span>
+            <span class="txt">{{ c.text }}</span>
           </label>
         {% endfor %}
       </div>
 
       <div class="q-actions">
-        <button class="btn" type="submit" id="btnNext">التالي</button>
-        <button class="btn secondary" type="button" id="btnSkip">تخطي</button>
-      </div>
+        <button class="btn btn-primary btn-sm" type="submit" id="btnNext">التالي</button>
 
-      <div class="q-hint">
-        ⏱️ لكل سؤال <b>{{ question_seconds }}</b> ثانية — عند انتهاء الوقت سيتم الانتقال تلقائياً.
+        <!-- ✅ تخطي: نحوله إلى زر يضبط skipField ثم يرسل -->
+        <button class="btn btn-sm btn-ghost" type="submit"
+                onclick="document.getElementById('skipField').value='1';">
+          تخطي
+        </button>
       </div>
     </form>
   </div>
+
 </div>
 {% endblock %}
 
 {% block base_css_extra %}
   .q-wrap{max-width:980px;margin:0 auto}
-  .q-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin:6px 0 12px}
-  .q-title{margin:0;font-size:18px;font-weight:1000}
-  .q-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
-  .q-pill{
-    display:inline-flex;gap:8px;align-items:center;
-    padding:8px 10px;border-radius:999px;
-    background:rgba(14,165,164,.08);
-    border:1px solid rgba(14,165,164,.16);
-    font-weight:1000;
+
+  .q-head{
+    display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;
+    margin:6px 0 12px;
   }
-  .q-pill2{background:rgba(239,68,68,.07);border-color:rgba(239,68,68,.18)}
-  #tRemain{display:inline-block;transition:transform .18s ease}
+
+  .q-quiz{
+    font-size:13.5px;
+    font-weight:650;  /* ✅ أخف */
+    margin:0;color:var(--txt)
+  }
+  .q-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+
+  .chip{
+    display:inline-flex;gap:8px;align-items:center;
+    padding:7px 10px;border-radius:999px;
+    border:1px solid rgba(231,238,246,.95);
+    background:#fff;
+    font-size:12px;
+    font-weight:600; /* ✅ أخف */
+  }
+  .chip .k{color:var(--mut);font-weight:600}
+  .chip .v{color:var(--txt);font-weight:650}
+  .chip .mut{color:var(--mut);font-weight:600}
+  .chip-soft{background:rgba(14,165,164,.07);border-color:rgba(14,165,164,.14)}
+  .chip-warn{background:rgba(245,158,11,.10);border-color:rgba(245,158,11,.18)}
 
   .q-card{padding:14px}
-  .q-head{
-    display:flex;gap:12px;align-items:flex-start;
-    padding-bottom:12px;border-bottom:1px dashed rgba(120,140,160,.25)
+
+  .q-qtext{
+    font-size:14.6px;
+    font-weight:600; /* ✅ خفيف جدًا */
+    line-height:2;
+    margin-bottom:10px;
   }
-  .q-no{
-    flex:0 0 auto;width:44px;height:44px;border-radius:18px;
+
+  /* ✅ تنبيه خفيف */
+  .q-hint{
+    display:flex;gap:10px;align-items:flex-start;
+    padding:10px 12px;border-radius:16px;
+    border:1px solid rgba(59,130,246,.14);
+    background:rgba(59,130,246,.06);
+    margin:0 0 12px;
+  }
+  .hi{
+    width:26px;height:26px;border-radius:12px;
     display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(135deg,var(--brand),var(--brand2));
-    color:#fff;font-weight:1000;
-    box-shadow:0 14px 26px rgba(16,185,129,.16);
+    background:#fff;border:1px solid rgba(2,6,23,.08);
+    flex:0 0 auto;
+    font-size:13px;
   }
-  .q-text{font-weight:1000;line-height:2;font-size:15px;color:var(--ink)}
+  .ht{
+    font-size:12.6px;
+    font-weight:600;
+    line-height:1.9;
+    color:var(--txt);
+  }
+  .ht b{font-weight:700}
 
-  .q-form{margin-top:12px}
-  .q-choices{display:grid;gap:10px}
-  .q-ch{
-    display:flex;align-items:center;gap:10px;
-    padding:12px;border-radius:18px;
+  .opts{display:flex;flex-direction:column;gap:10px}
+
+  .opt{
     border:1px solid rgba(231,238,246,.95);
-    background:rgba(255,255,255,.92);
+    background:#fff;
+    border-radius:16px;
+    padding:10px 12px;
+    display:flex;gap:10px;align-items:center;
     cursor:pointer;
-    transition: transform .08s ease, box-shadow .18s ease;
+    transition:.12s ease;
   }
-  .q-ch:hover{transform:translateY(-1px);box-shadow:0 10px 20px rgba(2,44,34,.06)}
-  .q-ch input{display:none}
+  .opt:hover{transform:translateY(-1px);box-shadow:0 10px 18px rgba(15,23,42,.05)}
+  .opt input{position:absolute;opacity:0;pointer-events:none}
 
-  .q-dot{
-    width:18px;height:18px;border-radius:999px;
-    border:2px solid rgba(14,165,164,.35);
-    display:inline-block;position:relative;flex:0 0 auto;
+  .dot{
+    width:14px;height:14px;border-radius:99px;
+    border:2px solid rgba(11,58,106,.22);
+    display:inline-block;flex:0 0 auto;
   }
-  .q-ch input:checked + .q-dot{border-color:var(--brand2)}
-  .q-ch input:checked + .q-dot::after{
-    content:"";position:absolute;inset:3px;border-radius:999px;background:var(--brand2);
+  .opt input:checked + .dot{
+    border-color:rgba(11,58,106,.90);
+    box-shadow:0 0 0 5px rgba(11,58,106,.10) inset;
   }
-  .q-ch-txt{font-weight:1000;line-height:1.9;color:var(--ink)}
 
-  .q-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-  .q-hint{margin-top:10px;color:var(--mut);font-weight:900;line-height:1.8;font-size:12.5px}
+  .txt{
+    font-size:13.3px;
+    font-weight:600;  /* ✅ أخف */
+    line-height:1.9;
+    color:var(--txt);
+  }
+
+  .q-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+  .btn-sm{
+    padding:8px 12px;border-radius:12px;
+    font-size:12px;font-weight:650; /* ✅ أخف */
+  }
+
+  .btn-ghost{
+    background:#fff;
+    border:1px solid rgba(231,238,246,.95);
+  }
 {% endblock %}
 
-{% block extra_js %}
+{% block base_js_extra %}
 <script>
 (function(){
-  const totalPerQ = Number("{{ question_seconds|default:50 }}");
-  let remain = Number("{{ remaining_seconds|default:50 }}");
+  var el = document.getElementById("tRemain");
+  if(!el) return;
 
-  const tRemain = document.getElementById("tRemain");
-  const form = document.getElementById("qForm");
-  const btnSkip = document.getElementById("btnSkip");
-  const btnNext = document.getElementById("btnNext");
+  // ✅ deadline-based countdown: لا يتأثر بتوقف التحديث في الخلفية
+  var initial = parseInt(el.getAttribute("data-remain") || el.textContent || "0", 10);
+  if (isNaN(initial) || initial < 0) initial = 0;
 
-  let submitted = false;
+  var deadline = Date.now() + (initial * 1000);
+  var form = document.getElementById("qForm");
+  var skipField = document.getElementById("skipField");
+  var submitted = false;
 
   function render(){
-    const v = Math.max(0, remain);
-    if (tRemain) tRemain.textContent = String(v);
+    var remain = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+    el.textContent = String(remain);
 
-    // لمسة تحذير بسيطة آخر 10 ثواني
-    if (v <= 10 && tRemain){
-      tRemain.style.transform = "scale(1.08)";
-    } else if (tRemain){
-      tRemain.style.transform = "scale(1)";
-    }
-  }
-
-  function clearChoices(){
-    document.querySelectorAll('input[name="choice_id"]').forEach(i => i.checked = false);
-  }
-
-  function safeSubmit(){
-    if (submitted) return;
-    submitted = true;
-    if (btnNext) btnNext.disabled = true;
-    form.submit();
-  }
-
-  // تخطي: ارسال بدون اختيار
-  if (btnSkip){
-    btnSkip.addEventListener("click", function(){
-      clearChoices();
-      safeSubmit();
-    });
-  }
-
-  // عداد
-  render();
-  const timer = setInterval(function(){
-    if (submitted){ clearInterval(timer); return; }
-    remain -= 1;
-    render();
-    if (remain <= 0){
-      clearInterval(timer);
-      clearChoices();
-      safeSubmit();
-    }
-  }, 1000);
-
-  // منع دبل إرسال
-  if (form){
-    form.addEventListener("submit", function(){
-      if (submitted) return false;
+    if(remain <= 0 && !submitted){
       submitted = true;
-      if (btnNext) btnNext.disabled = true;
-    });
+      if(form){
+        // ✅ عند انتهاء الوقت: نرسل كتخطي حتى لو ما اختار
+        if(skipField) skipField.value = "1";
+        form.submit();
+      }
+    }
   }
+
+  // تحديث سريع وخفيف
+  render();
+  var t = setInterval(render, 250);
+
+  // ✅ عند الرجوع للتبويب، نصحّح فوراً
+  document.addEventListener("visibilitychange", function(){
+    if(!document.hidden) render();
+  });
 })();
 </script>
 {% endblock %}

@@ -9,13 +9,15 @@ from django.utils import timezone
 
 
 # ======================================================
-# Shared choices
+# Shared choices / labels
 # ======================================================
-DOMAIN_CHOICES = (
-    ("deputy", "وكيل"),
-    ("counselor", "موجه طلابي"),
-    ("activity", "رائد نشاط"),
-)
+DOMAIN_LABELS: dict[str, str] = {
+    "deputy": "وكيل",
+    "counselor": "موجّه طلابي",
+    "activity": "رائد نشاط",
+}
+
+DOMAIN_CHOICES = tuple((k, v) for k, v in DOMAIN_LABELS.items())
 
 FINISH_REASON_CHOICES = (
     ("normal", "طبيعي"),
@@ -24,8 +26,9 @@ FINISH_REASON_CHOICES = (
 )
 
 
-def domain_label(domain: str) -> str:
-    return dict(DOMAIN_CHOICES).get(domain or "", domain or "")
+def domain_label(domain: str | None) -> str:
+    d = (domain or "").strip().lower()
+    return DOMAIN_LABELS.get(d, d or "")
 
 
 # ======================================================
@@ -35,9 +38,7 @@ class Quiz(models.Model):
     title = models.CharField("عنوان الاختبار", max_length=200, unique=True)
     is_active = models.BooleanField("نشط؟", default=False)
 
-    # لكل سؤال كم ثانية
     per_question_seconds = models.PositiveIntegerField("ثواني لكل سؤال", default=50)
-
     created_at = models.DateTimeField("تاريخ الإنشاء", default=timezone.now)
 
     class Meta:
@@ -50,7 +51,12 @@ class Quiz(models.Model):
 
 
 class Question(models.Model):
-    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, verbose_name="الاختبار")
+    quiz = models.ForeignKey(
+        Quiz,
+        on_delete=models.CASCADE,
+        related_name="questions",
+        verbose_name="الاختبار",
+    )
     order = models.PositiveIntegerField("ترتيب السؤال", default=1)
     text = models.TextField("نص السؤال")
 
@@ -65,7 +71,12 @@ class Question(models.Model):
 
 
 class Choice(models.Model):
-    question = models.ForeignKey(Question, on_delete=models.CASCADE, verbose_name="السؤال")
+    question = models.ForeignKey(
+        Question,
+        on_delete=models.CASCADE,
+        related_name="choices",
+        verbose_name="السؤال",
+    )
     text = models.TextField("نص الخيار")
     is_correct = models.BooleanField("إجابة صحيحة؟", default=False)
 
@@ -79,20 +90,15 @@ class Choice(models.Model):
 
 
 # ======================================================
-# Participant (Person) + Enrollment (Multi-domain)
+# Participant + Enrollment
 # ======================================================
 class Participant(models.Model):
-    """
-    ✅ يمثل الشخص (سجل واحد فقط لكل رقم)
-    """
     national_id = models.CharField("رقم الهوية/السجل", max_length=20, unique=True, db_index=True)
     full_name = models.CharField("الاسم", max_length=220)
     phone_last4 = models.CharField("آخر 4 أرقام من الجوال", max_length=4, blank=True, default="")
 
-    # صلاحية عامة للشخص (غير مرتبطة بمجال)
     is_allowed = models.BooleanField("مسموح بالدخول؟", default=True)
 
-    # ✅ قفل شامل بعد أول دخول فعلي لأي اختبار
     has_taken_exam = models.BooleanField("بدأ/أدى اختبار؟", default=False)
 
     locked_domain = models.CharField(
@@ -121,10 +127,12 @@ class Participant(models.Model):
 
 
 class Enrollment(models.Model):
-    """
-    ✅ تسجيل الشخص في مجال (متعدد المجالات لنفس السجل)
-    """
-    participant = models.ForeignKey(Participant, on_delete=models.CASCADE, related_name="enrollments", verbose_name="المشارك")
+    participant = models.ForeignKey(
+        Participant,
+        on_delete=models.CASCADE,
+        related_name="enrollments",
+        verbose_name="المشارك",
+    )
     domain = models.CharField("المجال", max_length=30, choices=DOMAIN_CHOICES, db_index=True)
     is_allowed = models.BooleanField("مسموح لهذا المجال؟", default=True)
     created_at = models.DateTimeField("تاريخ الإضافة", default=timezone.now)
@@ -138,15 +146,15 @@ class Enrollment(models.Model):
     def __str__(self) -> str:
         return f"{self.participant.national_id} -> {domain_label(self.domain)}"
 
+    @property
+    def domain_label(self) -> str:
+        return domain_label(self.domain)
+
 
 # ======================================================
-# Exam Window (time-based per domain)
+# Exam Window
 # ======================================================
 class ExamWindow(models.Model):
-    """
-    ✅ نافذة زمنية لمجال معين
-    مثال: activity 09:00 - 09:50 ، counselor 10:00 - 10:50 ، deputy 11:00 - 11:50
-    """
     name = models.CharField("اسم النافذة", max_length=200, blank=True, default="")
     domain = models.CharField("المجال", max_length=30, choices=DOMAIN_CHOICES, db_index=True)
 
@@ -162,8 +170,8 @@ class ExamWindow(models.Model):
         verbose_name_plural = "نوافذ الاختبارات"
 
     def __str__(self) -> str:
-        t = self.name.strip() or f"{domain_label(self.domain)}"
-        return f"{t} ({self.starts_at:%Y-%m-%d %H:%M} - {self.ends_at:%H:%M})"
+        title = (self.name or "").strip() or domain_label(self.domain)
+        return f"{title} ({self.starts_at:%Y-%m-%d %H:%M} - {self.ends_at:%H:%M})"
 
     def clean(self):
         if self.ends_at and self.starts_at and self.ends_at <= self.starts_at:
@@ -178,10 +186,14 @@ class ExamWindow(models.Model):
 # Attempt + Answer
 # ======================================================
 class Attempt(models.Model):
-    participant = models.ForeignKey(Participant, on_delete=models.CASCADE, verbose_name="المشارك")
+    participant = models.ForeignKey(
+        Participant,
+        on_delete=models.CASCADE,
+        related_name="attempts",
+        verbose_name="المشارك",
+    )
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, verbose_name="الاختبار")
 
-    # ✅ نسجل المجال الذي بدأ به (من النافذة)
     domain = models.CharField("المجال", max_length=30, choices=DOMAIN_CHOICES, db_index=True)
 
     session_key = models.CharField("مفتاح الجلسة", max_length=64, blank=True, default="", db_index=True)
@@ -213,20 +225,21 @@ class Attempt(models.Model):
     def __str__(self) -> str:
         return f"Attempt({self.id})"
 
-    # ---------------------------
-    # Helpers
-    # ---------------------------
+    @property
+    def domain_label(self) -> str:
+        return domain_label(self.domain)
+
     def answered_count(self) -> int:
         return self.answers.filter(answered_at__isnull=False).count()
 
     def questions_total(self) -> int:
-        return self.quiz.question_set.count()
+        return self.quiz.questions.count()
 
     def current_question(self):
         if self.is_finished:
             return None
         return (
-            self.quiz.question_set.order_by("order", "id")
+            self.quiz.questions.order_by("order", "id")
             .all()[self.current_index : self.current_index + 1]
             .first()
         )
@@ -248,9 +261,6 @@ class Attempt(models.Model):
     def remaining_seconds(self) -> int | None:
         if self.is_finished:
             return None
-        ans = self.current_answer()
-        if not ans:
-            return None
         deadline = self.current_deadline()
         if not deadline:
             return None
@@ -260,18 +270,21 @@ class Attempt(models.Model):
         rem = self.remaining_seconds()
         return (not self.is_finished) and (rem is not None) and (rem <= 0)
 
-    @property
-    def domain_label(self) -> str:
-        return domain_label(self.domain)
-
 
 class Answer(models.Model):
     attempt = models.ForeignKey(
-        Attempt, on_delete=models.CASCADE, related_name="answers", verbose_name="المحاولة"
+        Attempt,
+        on_delete=models.CASCADE,
+        related_name="answers",
+        verbose_name="المحاولة",
     )
     question = models.ForeignKey(Question, on_delete=models.CASCADE, verbose_name="السؤال")
     selected_choice = models.ForeignKey(
-        Choice, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="الخيار المختار"
+        Choice,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="الخيار المختار",
     )
 
     started_at = models.DateTimeField("وقت بدء السؤال", default=timezone.now)
