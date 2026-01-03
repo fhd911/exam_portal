@@ -48,12 +48,12 @@ class Command(BaseCommand):
         col_domain: str = opts["col_domain"]
         strict: bool = opts["strict_domains"]
 
-        # ✅ domains الموجودة فعليًا في ملفك (Render):
+        # ✅ domains الموجودة فعليًا في ملفك:
         # counselor / deputy / activity
         # التسمية هنا للعرض/التقارير فقط (الدومين المخزن يبقى كود ثابت).
         MAP = {
             "deputy": "وكيل/وكيلة",
-            "counselor": "مرشد أو موجه",
+            "counselor": "موجه/موجهة",
             "activity": "رائد/رائدة نشاط",
         }
 
@@ -80,7 +80,6 @@ class Command(BaseCommand):
                     continue
 
                 # Normalization (لو جاء أي تنويعات مستقبلًا)
-                # مثال: "Counselor" / "counselor " / ... إلخ
                 ALIASES = {
                     "counselor": "counselor",
                     "deputy": "deputy",
