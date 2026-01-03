@@ -1,4 +1,4 @@
-# config/settings.py
+# config/settings.py  (استبدله بالكامل) ✅ جاهز لـ Render (PostgreSQL) + حماية CSRF + WhiteNoise
 from __future__ import annotations
 
 import os
@@ -116,27 +116,35 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 
 # =========================
-# Database
+# Database (Render: PostgreSQL / Local: SQLite)
 # =========================
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
-
 DATABASE_URL = env_str("DATABASE_URL", "").strip()
+
 if DATABASE_URL:
+    # ✅ على Render لازم PostgreSQL يشتغل فعليًا — بدون سكوت
     try:
         import dj_database_url  # pip install dj-database-url
+    except Exception as e:
+        raise RuntimeError(
+            "DATABASE_URL is set but dj-database-url is not installed. "
+            "Add 'dj-database-url' to requirements.txt"
+        ) from e
 
-        DATABASES["default"] = dj_database_url.parse(
+    DATABASES = {
+        "default": dj_database_url.parse(
             DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=not DEBUG,
+            conn_max_age=int(env_str("DJANGO_DB_CONN_MAX_AGE", "600")),
+            ssl_require=True,
         )
-    except Exception:
-        pass
+    }
+else:
+    # تطوير محلي فقط
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # =========================
@@ -184,9 +192,18 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
     SECURE_HSTS_SECONDS = int(env_str("DJANGO_HSTS_SECONDS", "60"))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("DJANGO_HSTS_INCLUDE_SUBDOMAINS", True)
     SECURE_HSTS_PRELOAD = env_bool("DJANGO_HSTS_PRELOAD", True)
 
-    # لو عندك Render domain ضيفه هنا (مثال):
-    # CSRF_TRUSTED_ORIGINS = ["https://your-app.onrender.com"]
+    # ✅ CSRF trusted origins (مهم جدًا على Render)
+    _csrf = env_str("DJANGO_CSRF_TRUSTED_ORIGINS", "").strip()
+    if _csrf:
+        CSRF_TRUSTED_ORIGINS = [x.strip() for x in _csrf.split(",") if x.strip()]
+    else:
+        CSRF_TRUSTED_ORIGINS = [
+            f"https://{h}"
+            for h in ALLOWED_HOSTS
+            if h not in {"localhost", "127.0.0.1"} and "*" not in h
+        ]
