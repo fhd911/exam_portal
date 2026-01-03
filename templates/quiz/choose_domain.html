@@ -1,0 +1,28 @@
+{% extends "quiz/base.html" %}
+{% block title %}اختيار المجال{% endblock %}
+
+{% block content %}
+<div class="wrap" style="max-width:760px;margin:0 auto;">
+  <div class="card" style="padding:18px;">
+    <h1 style="margin:0 0 10px;font-size:16px;font-weight:900;">اختر المجال</h1>
+    <div style="color:#607185;font-size:12px;line-height:1.8;margin-bottom:12px;">
+      لديك أكثر من مجال متاح الآن. اختر مجالًا واحدًا فقط — بعد بدء الاختبار لا يمكن دخول اختبار آخر.
+    </div>
+
+    {% if err %}
+      <div class="msg msg-warn" style="margin-bottom:10px;">{{ err }}</div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <div style="display:flex;flex-wrap:wrap;gap:10px;">
+        {% for it in items %}
+          <button class="btn" name="domain" value="{{ it.domain }}" type="submit">
+            {{ it.label }}
+          </button>
+        {% endfor %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

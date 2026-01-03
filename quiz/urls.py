@@ -19,6 +19,9 @@ urlpatterns = [
     # ✅ إصلاح/تهيئة الجلسة (زر إعادة ضبط في base.html)
     path("reset/", views.reset_session_view, name="reset_session"),
 
+    # ✅ اختيار المجال إذا كان له أكثر من مجال مفتوح الآن
+    path("choose-domain/", views.choose_domain_view, name="choose_domain"),
+
     # ✅ صفحة الإقرار قبل الاختبار
     path("confirm/", views.confirm_view, name="confirm"),
 

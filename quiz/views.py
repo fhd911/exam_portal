@@ -1,4 +1,4 @@
-# quiz/views.py  (استبدله بالكامل) ✅ صارم في ربط الأسئلة بالمجال + يمنع تداخل المجالات
+# quiz/views.py  (استبدله بالكامل) ✅ صارم في ربط الأسئلة بالمجال + اختيار مجال + يمنع أكثر من اختبار
 from __future__ import annotations
 
 import csv
@@ -319,7 +319,7 @@ def home(request: HttpRequest) -> HttpResponse:
 
 @require_POST
 def reset_session_view(request: HttpRequest) -> HttpResponse:
-    for k in [SESSION_PID, SESSION_CONFIRMED, SESSION_ATTEMPT_ID, "selected_domain"]:
+    for k in [SESSION_PID, SESSION_CONFIRMED, SESSION_ATTEMPT_ID, "selected_domain", "open_domains"]:
         request.session.pop(k, None)
 
     try:
@@ -382,6 +382,11 @@ def login_view(request: HttpRequest) -> HttpResponse:
         messages.error(request, "غير مسموح لك بالدخول (قرار إداري).")
         return redirect("quiz:login")
 
+    # ✅ إذا سبق وأنه بدأ/أنهى اختبارًا: ممنوع دخول أي اختبار آخر
+    if getattr(p, "has_taken_exam", False):
+        messages.error(request, "تم تنفيذ الاختبار مسبقًا ولا يمكن دخول اختبار آخر.")
+        return redirect("quiz:finish")
+
     allowed_domains = list(
         Enrollment.objects.filter(participant=p, is_allowed=True).values_list("domain", flat=True)
     )
@@ -402,6 +407,7 @@ def login_view(request: HttpRequest) -> HttpResponse:
             return redirect("quiz:login")
 
         chosen_domain = locked
+        request.session["open_domains"] = []
     else:
         open_now = [d for d in allowed_domains if _is_in_window(d)]
 
@@ -409,12 +415,16 @@ def login_view(request: HttpRequest) -> HttpResponse:
             messages.error(request, "لا يوجد اختبار متاح الآن لك (خارج النوافذ الزمنية).")
             return redirect("quiz:login")
 
+        # ✅ إذا أكثر من مجال متاح الآن: اترك له حرية الاختيار
         if len(open_now) > 1:
-            labels = " / ".join(_domain_ar(d) for d in open_now)
-            messages.error(request, f"يوجد أكثر من مجال متاح الآن ({labels}). تواصل مع الإدارة.")
-            return redirect("quiz:login")
+            request.session[SESSION_PID] = p.id
+            request.session[SESSION_CONFIRMED] = False
+            request.session["selected_domain"] = ""
+            request.session["open_domains"] = open_now
+            return redirect("quiz:choose_domain")
 
         chosen_domain = open_now[0]
+        request.session["open_domains"] = []
 
     request.session[SESSION_PID] = p.id
     request.session[SESSION_CONFIRMED] = False
@@ -422,9 +432,86 @@ def login_view(request: HttpRequest) -> HttpResponse:
     return redirect("quiz:confirm")
 
 
+@require_http_methods(["GET", "POST"])
+def choose_domain_view(request: HttpRequest) -> HttpResponse:
+    """
+    ✅ اختيار المجال إذا كان للمرشح أكثر من مجال مفتوح الآن.
+    - لا يرفع has_taken_exam هنا
+    - يقفل locked_domain عند الاختيار (حتى لا يغير المجال)
+    """
+    pid = request.session.get(SESSION_PID)
+    if not pid:
+        return redirect("quiz:login")
+
+    p = get_object_or_404(Participant, id=pid)
+
+    # ✅ إذا سبق وأنه بدأ/أنهى اختبارًا: ممنوع
+    if getattr(p, "has_taken_exam", False):
+        messages.error(request, "تم تنفيذ الاختبار مسبقًا ولا يمكن دخول اختبار آخر.")
+        return redirect("quiz:finish")
+
+    locked = _norm(getattr(p, "locked_domain", "")).lower()
+    if locked:
+        request.session["selected_domain"] = locked
+        return redirect("quiz:confirm")
+
+    open_domains = request.session.get("open_domains") or []
+    open_domains = [_norm(d).lower() for d in open_domains if _norm(d).lower() in VALID_DOMAINS]
+
+    # إذا ما عندنا بالقائمة لسبب ما: نبنيها من DB (دفاعيًا)
+    if not open_domains:
+        allowed_domains = list(
+            Enrollment.objects.filter(participant=p, is_allowed=True).values_list("domain", flat=True)
+        )
+        open_domains = [d for d in allowed_domains if _is_in_window(d)]
+
+    # لا يوجد شيء مفتوح
+    if not open_domains:
+        messages.error(request, "لا يوجد اختبار متاح الآن لك (خارج النوافذ الزمنية).")
+        return redirect("quiz:login")
+
+    # واحد فقط -> اقفل وتابع
+    if len(open_domains) == 1:
+        dom = _norm(open_domains[0]).lower()
+        with transaction.atomic():
+            p2 = Participant.objects.select_for_update().get(id=p.id)
+            if getattr(p2, "has_taken_exam", False):
+                messages.error(request, "تم تنفيذ الاختبار مسبقًا ولا يمكن دخول اختبار آخر.")
+                return redirect("quiz:finish")
+            if not _norm(getattr(p2, "locked_domain", "")).lower():
+                p2.locked_domain = dom
+                p2.locked_at = _now()
+                p2.save(update_fields=["locked_domain", "locked_at"])
+        request.session["selected_domain"] = dom
+        return redirect("quiz:confirm")
+
+    if request.method == "GET":
+        items = [{"domain": d, "label": _domain_ar(d)} for d in open_domains]
+        return render(request, "quiz/choose_domain.html", {"items": items, "p": p})
+
+    # POST
+    dom = _norm(request.POST.get("domain", "")).lower()
+    if dom not in set(open_domains):
+        items = [{"domain": d, "label": _domain_ar(d)} for d in open_domains]
+        return render(request, "quiz/choose_domain.html", {"items": items, "p": p, "err": "اختيار غير صالح."})
+
+    with transaction.atomic():
+        p2 = Participant.objects.select_for_update().get(id=p.id)
+        if getattr(p2, "has_taken_exam", False):
+            messages.error(request, "تم تنفيذ الاختبار مسبقًا ولا يمكن دخول اختبار آخر.")
+            return redirect("quiz:finish")
+        if not _norm(getattr(p2, "locked_domain", "")).lower():
+            p2.locked_domain = dom
+            p2.locked_at = _now()
+            p2.save(update_fields=["locked_domain", "locked_at"])
+
+    request.session["selected_domain"] = dom
+    return redirect("quiz:confirm")
+
+
 @require_POST
 def logout_view(request: HttpRequest) -> HttpResponse:
-    for k in [SESSION_PID, SESSION_CONFIRMED, SESSION_ATTEMPT_ID, "selected_domain"]:
+    for k in [SESSION_PID, SESSION_CONFIRMED, SESSION_ATTEMPT_ID, "selected_domain", "open_domains"]:
         request.session.pop(k, None)
     messages.success(request, "تم تسجيل الخروج.")
     return redirect("quiz:login")
@@ -435,28 +522,37 @@ def confirm_view(request: HttpRequest) -> HttpResponse:
     pid = request.session.get(SESSION_PID)
     domain = request.session.get("selected_domain")
 
-    if not pid or not domain:
+    if not pid:
         return redirect("quiz:login")
 
     p = get_object_or_404(Participant, id=pid)
+
+    # ✅ منع أي اختبار إذا سبق أن بدأ/أنهى اختبارًا
+    if getattr(p, "has_taken_exam", False):
+        messages.error(request, "تم تنفيذ الاختبار مسبقًا ولا يمكن دخول اختبار آخر.")
+        return redirect("quiz:finish")
+
     domain = _norm(domain).lower()
+    if not domain:
+        # لم يحدد مجال بعد
+        return redirect("quiz:choose_domain")
 
     if domain not in VALID_DOMAINS:
         messages.error(request, "تعذر تحديد المجال. تواصل مع الإدارة.")
         return redirect("quiz:login")
 
-    if (
-        getattr(p, "has_taken_exam", False)
-        and _norm(getattr(p, "locked_domain", "")).lower()
-        and _norm(getattr(p, "locked_domain", "")).lower() != domain
-    ):
+    locked = _norm(getattr(p, "locked_domain", "")).lower()
+    if locked and locked != domain:
         messages.error(request, f"تم قفلك على مجال: {_domain_ar(p.locked_domain)}. لا يمكنك تغيير المجال.")
         return redirect("quiz:login")
 
     # ✅ اختيار صارم للاختبار حسب المجال (بدون أي fallback)
     quiz = _get_quiz_for_domain(domain, active_only=True)
     if not quiz:
-        messages.error(request, f"لا يوجد اختبار نشط مضبوط لهذا المجال ({_domain_ar(domain)}). راجع عناوين الاختبارات وتفعيلها.")
+        messages.error(
+            request,
+            f"لا يوجد اختبار نشط مضبوط لهذا المجال ({_domain_ar(domain)}). راجع عناوين الاختبارات وتفعيلها.",
+        )
         return redirect("quiz:login")
 
     window = _get_active_window(domain)
@@ -486,11 +582,11 @@ def confirm_view(request: HttpRequest) -> HttpResponse:
     # POST: موافقة
     request.session[SESSION_CONFIRMED] = True
 
-    if not getattr(p, "has_taken_exam", False):
-        p.has_taken_exam = True
+    # ✅ اقفل المجال فقط (بدون رفع has_taken_exam هنا)
+    if not locked:
         p.locked_domain = domain
         p.locked_at = _now()
-        p.save(update_fields=["has_taken_exam", "locked_domain", "locked_at"])
+        p.save(update_fields=["locked_domain", "locked_at"])
 
     if not window:
         messages.error(request, "لا توجد نافذة اختبار نشطة الآن لهذا المجال.")
@@ -528,6 +624,35 @@ def question_view(request: HttpRequest) -> HttpResponse:
 
     if a.is_finished:
         return redirect("quiz:finish")
+
+    # ✅ هنا هو “الدخول الفعلي للاختبار”
+    # - أول وصول لصفحة الأسئلة: نرفع has_taken_exam=True (وبالتالي يمنع أي اختبار آخر)
+    # - نتأكد أن locked_domain يطابق مجال المحاولة
+    p = a.participant
+    dom = _norm(getattr(a, "domain", "")).lower()
+
+    if getattr(p, "has_taken_exam", False):
+        # إذا سبق أنه بدأ/أنهى اختبارًا: امنع مباشرة
+        messages.error(request, "تم تنفيذ الاختبار مسبقًا ولا يمكن دخول اختبار آخر.")
+        _finish_attempt(a, reason="blocked")
+        return redirect("quiz:finish")
+
+    locked = _norm(getattr(p, "locked_domain", "")).lower()
+    if locked and locked != dom:
+        messages.error(request, f"تم قفلك على مجال: {_domain_ar(p.locked_domain)}. لا يمكنك تغيير المجال.")
+        _finish_attempt(a, reason="blocked")
+        return redirect("quiz:finish")
+
+    # قفل المجال إذا لم يكن مقفولًا
+    if not locked:
+        p.locked_domain = dom
+        p.locked_at = _now()
+        p.save(update_fields=["locked_domain", "locked_at"])
+        locked = dom
+
+    # ✅ منع دخول أكثر من اختبار: من هنا نعتبره دخل الاختبار
+    p.has_taken_exam = True
+    p.save(update_fields=["has_taken_exam"])
 
     q = _attempt_current_question(a)
     if not q:
